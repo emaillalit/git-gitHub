@@ -1,0 +1,36 @@
+---
+- name: Stop node-exporter container
+  ansible.builtin.shell: "docker stop node-exporter || true"
+
+- name: Remove node-exporter container
+  ansible.builtin.shell: "docker rm node-exporter || true"
+
+- name: Pull node-exporter images
+  docker_image:
+    name: "{{ aws_ecr_registry }}/utils/node-exporter"
+    tag: "{{ node_exporter_version }}"
+    source: pull
+
+- name: Run node-exporter container
+  docker_container:
+    name: node-exporter
+    image: "{{ aws_ecr_registry }}/utils/node-exporter:{{ node_exporter_version }}"
+    restart_policy: unless-stopped
+    network_mode: host
+    log_options:
+      max-size: "100m"
+      max-file: "5"
+    pid_mode: host
+    command: "--path.rootfs=/host"
+    volumes:
+      - "/:/host:ro,rslave"
+
+- name: Sleep for 30 seconds and continue with play
+  wait_for:
+    timeout: 30
+
+- name: Check if node-exporter continer up
+  uri:
+    url: http://localhost:9100/metrics
+    method: GET
+    status_code: 200

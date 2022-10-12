@@ -1,0 +1,2 @@
+ebs_device: /dev/xvdk
+mount_point: /data

@@ -1,0 +1,10 @@
+- include: mark-start.yml
+- include: attach-volume.yml
+- include: mount.yml
+- include: mfa.yml
+# - include: install-ansible.yml
+- include: install-redis-cli.yml
+- include: install-additional-package.yml
+- include: ssh-port-forwarding.yml
+- include: install-ops-tools.yml
+- include: mark-complete.yml

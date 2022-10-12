@@ -1,0 +1,36 @@
+---
+# get route53 info
+- hosts: localhost
+  tasks:
+    - name: list all hosted zones
+      community.aws.route53_info:
+        query: hosted_zone
+      register: hosted_zones
+
+    - name: debug
+      debug: msg="{{ hosted_zones }}"
+
+    - name: debug 2
+      debug: msg="{{ hosted_zones.HostedZones }}"
+
+# read variables
+- hosts: localhost
+  tasks:
+    - name: read private domain name
+      shell: "grep base_domain_name /opt/arena/metadata.txt | cut -d: -f2"
+      register: base_domain_name
+
+    - name: output domain name
+      debug: msg="{{ base_domain_name }}"
+
+    - name: output domain name stdout
+      debug: msg="{{ base_domain_name.stdout }}"
+
+# lookup
+- hosts: tag_Role_bliss_service_awsqa
+  tasks:
+    - name: test lookups
+      debug: msg="find {{ lookup('aws_ssm', '/qa/eos/db/host') }}"
+
+
+# ansible-playbook -u firstboot -i inventory/ z-exp.yml

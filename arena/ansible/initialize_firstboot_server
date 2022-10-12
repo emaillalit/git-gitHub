@@ -1,0 +1,81 @@
+#!/bin/bash
+echo "->(init_firstboot) Kickstart firstboot server."
+
+# Disable password-based remote login for root
+echo "-->(init_firstboot) Disable password-based remote login for root."
+sed -i 's/#PermitRootLogin .*/PermitRootLogin without-password/' /etc/ssh/sshd_config
+service sshd restart
+
+# Install jq, tree, and python-pip
+#echo "-->(init_firstboot) Install required packages"
+#yum install -y jq tree python-pip
+
+echo "-->(init_firstboot) Retrieve metadata"
+# Retrieve metadata
+AWS_REGION=$(grep aws_region /opt/arena/metadata.txt | cut -d: -f2)
+echo "---> AWS_REGION=${AWS_REGION}"
+INSTANCE_ID=$(TOKEN=`curl -X PUT -s "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"` && curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/instance-id)
+echo "---> INSTANCE_ID=${INSTANCE_ID}"
+
+# Get metadata
+PLM_ENV_NAME=$(grep target_env_name /opt/arena/metadata.txt | cut -d: -f2)
+echo "---> PLM_ENV_NAME=${PLM_ENV_NAME}"
+
+
+# Set hostname
+echo "-->(init_firstboot) Set hostname to firstboot-utility-$PLM_ENV_NAME-$INSTANCE_ID"
+hostnamectl set-hostname firstboot-utility-$PLM_ENV_NAME-$INSTANCE_ID
+
+# Add user firstboot to sudoadm group
+echo "-->(init_firstboot) Group sudoadm and user firstboot"
+groupadd sudoadm
+usermod -a -G sudoadm firstboot
+echo -e "#sudoadm group#\n%sudoadm   ALL=(ALL) NOPASSWD:     ALL" > /etc/sudoers.d/sudoadm
+
+# Generate firstboot user public key for firstboot itself
+ssh-keygen -y -f /home/firstboot/.ssh/id_rsa > /home/firstboot/.ssh/authorized_keys
+
+## Install Ansible
+#echo "-->(init_firstboot) Install Ansible"
+## 2020-3-12 Install specific ansible version, because the latest version(2.9.6) will generates huge botocore related logs
+#pip install ansible==2.9.2
+#echo "export PATH=$PATH:/usr/local/bin" >> /etc/profile
+#source /etc/profile
+
+# Create Ansible log file
+touch /var/log/ansible.log
+chown firstboot:firstboot /var/log/ansible.log
+
+# Install boto and boto3 for controlling AWS
+# 2020-3-12 Install specific boto versions, the latest version may have issues
+#pip install boto==2.49.0 boto3==1.12.19 botocore==1.15.19
+
+# Install python3.8 for ansible
+#amazon-linux-extras enable python3.8
+#yum install -y python3.8
+#python3.8 -m pip install --upgrade pip
+#python3.8 -m pip install boto3
+#python3.8 -m pip install ansible
+
+# Set AWS region
+echo -e "export AWS_DEFAULT_REGION=$AWS_REGION" >> /home/firstboot/.bashrc
+
+# Install Go
+#echo "-->(init_firstboot) Install Go"
+#curl -L -o /tmp/go.tgz https://golang.org/dl/go1.15.8.linux-amd64.tar.gz
+#tar -C /usr/local -zxf /tmp/go.tgz
+#echo "export PATH=$PATH:/usr/local/go/bin" >> /home/firstboot/.bashrc
+#source /home/firstboot/.bashrc
+
+# Run ec2.go
+echo "-->(init_firstboot) Run ec2.go"
+su - firstboot -c "cd /opt/arena/ansible/firstboot && go run /opt/arena/ansible/firstboot/ec2.go &"
+
+# Waiting for the firstboot running
+sleep 10
+
+# Firstboot myself
+echo "-->(init_firstboot) Firstboot myself"
+curl -d "instance_id=$INSTANCE_ID" -X POST http://localhost:8080/firstboot
+
+echo "->(init_firstboot) Kickstart firstboot server complete."

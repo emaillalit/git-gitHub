@@ -1,0 +1,16 @@
+---
+- name: Set hostname
+  ansible.builtin.hostname: name={{ ec2_tag_Name }}-{{ ec2_id }}
+
+#- name: Register EC2 instance name
+#  ansible.builtin.shell: echo $HOSTNAME
+#  register: tag_name
+
+# Use local_action which performed on firstboot-server
+# If use the ec2_tag directly, this action is performed on the destination instance which have no boto3 installed, will failed
+#- name: Set tag name to ec2 instance
+#  local_action: ec2_tag resource={{ ec2_id }} state=present region={{ aws_region }}
+#  args:
+#    tags:
+#      Name: "{{ ec2_tag_Name }}"
+#  ignore_errors: yes

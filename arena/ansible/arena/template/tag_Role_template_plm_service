@@ -1,0 +1,62 @@
+healthcheck_endpoint: /SYSTEM/dbtest
+service_name: plm
+ldap_access_group_suffix: webserver
+
+pod:
+  containers:
+    plm:
+      image_name: "{{ aws_ecr_registry }}/plm"
+      image_tag: "{{ lookup('aws_ssm', '/<<.Env>>/plm/image_tag') }}"
+      log_driver: json-file
+      environment:
+        CONFD_BACKEND: env
+        COOKIE_DOMAIN: .<<.TldDomain>>
+        CSP_DOMAINS: <<.TldDomain>>
+        DB_HOST: db.priv.<<.BaseDomain>>
+        DB_NAME: <<.DbName>>
+        DB_PASSWORD: "{{ lookup('aws_ssm', '/<<.Env>>/db/password/plm_web') }}"
+        DEPLOYMENT_INFRASTRUCTURE: <<.DeploymentInfrastructure>>
+        EXTERNAL_APP_HOST: app.<<.BaseDomain>>
+        EXTERNAL_APPS_HOST: apps.<<.BaseDomain>>
+        EXTERNAL_FILES_HOST: files.<<.BaseDomain>>
+        FEATURE_TFA_DISABLE: "<<.FeatureTfaDisable>>"
+        HTTP_HEADERS_SOURCEIP: "<<.HttpHeadersSourceIp>>"
+        LOGGING_DEFAULT: DEBUG
+        LOGGING_SQL: DEBUG
+        MSA_HOST: mail.priv.<<.BaseDomain>>
+        EMAIL_SENDER_AUTO: do-not-reply@<<.BaseDomain>>
+        PKI_PASSWORD: "{{ lookup('aws_ssm', '/pki/password/<<.Env>>') }}"
+        REDIS_HOST: redis.priv.<<.BaseDomain>>
+        SALESFORCE_LOGIN_ID: <<.SalesforceLoginId>>
+        SALESFORCE_LOGIN_PASSWORD: <<.SalesforceLoginPassword>>
+        SERVICE_API_HOST: api.priv.<<.BaseDomain>>
+        SERVICE_APP_HOST: app.priv.<<.BaseDomain>>
+        SERVICE_AUTH_HOST: auth.priv.<<.BaseDomain>>
+        SERVICE_BLISS_HOST: bliss.priv.<<.BaseDomain>>
+        SERVICE_BMS_HOST: bms.priv.<<.BaseDomain>>
+        SERVICE_COLLAB_HOST: collab.priv.<<.BaseDomain>>
+        SERVICE_EOS_HOST: eos.priv.<<.BaseDomain>>
+        SERVICE_FILES_HOST: gate.priv.<<.BaseDomain>>
+        SERVICE_GATE_HOST: gate.priv.<<.BaseDomain>>
+        SERVICE_NOTIFY_HOST: notify.priv.<<.BaseDomain>>
+        SERVICE_PUBMARKET_HOST: pubmarket.priv.<<.BaseDomain>>
+        SERVICE_SCHEDULER_HOST: scheduler.priv.<<.BaseDomain>>
+        SERVICE_SDS_HOST: sds.priv.<<.BaseDomain>>
+        SERVICE_WORKFLOW_HOST: workflow.priv.<<.BaseDomain>>
+        SERVICE_XRAY_HOST: xray.priv.<<.BaseDomain>>
+        SERVICE_ACCT_HOST: acct.priv.<<.BaseDomain>>
+        SERVICE_TREX_HOST: trex.priv.<<.BaseDomain>>
+        SERVICE_IMP_HOST: imp.priv.<<.BaseDomain>>
+        GOODDATA_HOST: <<.GoodDataHost>>
+        GOODDATA_LOGIN: <<.GoodDataLogin>>
+        GOODDATA_PASSWORD: <<.GoodDataPassword>>
+        PGP_PASSWORD: <<.GoodDataPgpPassword>>
+      ports:
+        - 80:8080
+        - 8444:8444
+        - 50052:50052
+      volumes:
+        - /arena/pki:/arena/pki
+        - /arena/log:/arena/log
+      probes:
+        - curl -s -f --show-error "http://$HOSTNAME:80{{ healthcheck_endpoint }}"

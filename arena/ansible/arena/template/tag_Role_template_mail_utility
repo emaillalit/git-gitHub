@@ -1,0 +1,8 @@
+uppercase_env_name: <<.FullEnv | toUpper>>
+networks: <<.CIDR>>
+mail_name: Arena <<.FullEnv | toUpper>> Mail Service
+helo_name: mail.<<.BaseDomain>>
+ses_smtp_relay_host: "{{ lookup('aws_ssm', '/<<.Env>>/mail/smtp/relayhost') }}"
+ses_smtp_sasl_credential : "{{ lookup('aws_ssm', '/<<.Env>>/mail/smtp/sasl/credential') }}"
+service_name: mail
+ldap_access_group_suffix: ""

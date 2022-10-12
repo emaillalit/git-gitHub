@@ -1,0 +1,30 @@
+default:
+  good_data:
+    host: arenasolutions.na.gooddata.com
+    login: gooddata@arenasolutions.com
+  sales_force:
+    lead_url: http://na4.salesforce.com/servlet/sales.servlet.WebToLead
+    arena_org_id: "00D600000006xJr"
+    customer_portal_login_url: "https://ssl.salesforce.com/sserv/login.jsp?orgId=00D00000000hZci"
+    login_id: "dev-arenaplm2salesforce@arenasolutions.com"
+    login_password: "dev-a7Ups01dVX4zXyJzjeI71rjXNM8Bd40WcJxJ"
+    web_to_case_origin: "00D6t0000004YfW"
+    web_to_case_url: "https://arenasolutions--full.my.salesforce.com/servlet/servlet.WebToCase"
+
+development:
+
+arenaeurope:
+  good_data:
+    host: europe-arenaplm.on.gooddata.com
+  sales_force:
+    login_id: "arenaplm2salesforce@arenasolutions.com"
+    login_password: "a7Ups01dVX4zrK6RrVdCg4CGGlkJQ90FPi2aR"
+    web_to_case_origin: "00D00000000hZci"
+    web_to_case_url: "https://webto.salesforce.com/servlet/servlet.WebToCase"
+
+arenagov:
+  sales_force:
+    login_id: "arenaplm2salesforce@arenasolutions.com"
+    login_password: "a7Ups01dVX4zrK6RrVdCg4CGGlkJQ90FPi2aR"
+    web_to_case_origin: "00D00000000hZci"
+    web_to_case_url: "https://webto.salesforce.com/servlet/servlet.WebToCase"

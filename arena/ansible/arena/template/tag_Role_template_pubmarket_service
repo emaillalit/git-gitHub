@@ -1,0 +1,21 @@
+healthcheck_endpoint: /SYSTEM/dbtest
+service_name: pubmarket
+ldap_access_group_suffix: webserver
+
+pod:
+  containers:
+    pubmarket:
+      image_name: "{{ aws_ecr_registry }}/pubmarket"
+      image_tag: "{{ lookup('aws_ssm', '/<<.Env>>/pubmarket/image_tag') }}"
+      log_driver: json-file
+      environment:
+        CONFD_BACKEND: env
+        DOC_BASE: "{{ lookup('aws_ssm', '/<<.Env>>/pubmarket/doc/base') }}"
+      ports:
+        - 80:8080
+        - 50052:50052
+      volumes:
+        - /arena/pki:/arena/pki
+        - /arena/log:/arena/log
+      probes:
+        - curl -s -f --show-error "http://localhost:80{{ healthcheck_endpoint }}"

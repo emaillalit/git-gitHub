@@ -1,0 +1,14 @@
+- name: limit docker log size
+  ansible.builtin.shell: |
+    mkdir -p /etc/docker
+    cat >/etc/docker/daemon.json<<EOF
+    {
+      "log-opts": {
+        "max-size": "100m",
+        "max-file": "5"
+      }
+    }
+    EOF
+
+- name: make docker deamon take effect
+  ansible.builtin.shell: systemctl daemon-reload

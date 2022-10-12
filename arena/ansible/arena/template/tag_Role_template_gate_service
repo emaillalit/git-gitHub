@@ -1,0 +1,50 @@
+healthcheck_endpoint: /SYSTEM/dbtest
+service_name: gate
+ldap_access_group_suffix: webserver
+
+pod:
+  containers:
+    gate:
+      image_name: "{{ aws_ecr_registry }}/gate"
+      image_tag: "{{ lookup('aws_ssm', '/<<.Env>>/gate/image_tag') }}"
+      log_driver: json-file
+      environment:
+        CONFD_BACKEND: env
+        CORS_DOMAINS: <<.TldDomain>>
+        DB_HOST: db.priv.<<.BaseDomain>>
+        DB_NAME: <<.DbName>>
+        DB_PASSWORD: "{{ lookup('aws_ssm', '/<<.Env>>/db/password/plm_web') }}"
+        EXTERNAL_API_HOST: api.<<.BaseDomain>>
+        EXTERNAL_APP_HOST: app.<<.BaseDomain>>
+        EXTERNAL_APPS_HOST: apps.<<.BaseDomain>>
+        EXTERNAL_AUTH_HOST: auth.<<.BaseDomain>>
+        EXTERNAL_FILES_HOST: files.<<.BaseDomain>>
+        EXTERNAL_LABS_HOST: labs.<<.BaseDomain>>
+        EXTERNAL_RESTAPI_HOST: api.<<.BaseDomain>>
+        HTTP_HEADERS_SOURCEIP: "<<.HttpHeadersSourceIp>>"
+        LISTENER_HTTPS_HOST: gate.priv.<<.BaseDomain>>
+        PKI_PASSWORD: "{{ lookup('aws_ssm', '/pki/password/<<.Env>>') }}"
+        REDIS_HOST: redis.priv.<<.BaseDomain>>
+        SERVICE_API_HOST: api.priv.<<.BaseDomain>>
+        SERVICE_APP_HOST: app.priv.<<.BaseDomain>>
+        SERVICE_AUTH_HOST: auth.priv.<<.BaseDomain>>
+        SERVICE_BLISS_HOST: bliss.priv.<<.BaseDomain>>
+        SERVICE_COLLAB_HOST: collab.priv.<<.BaseDomain>>
+        SERVICE_FILES_HOST: gate.priv.<<.BaseDomain>>
+        SERVICE_GATE_HOST: gate.priv.<<.BaseDomain>>
+        SERVICE_PLM_HOST: plm.priv.<<.BaseDomain>>
+        SERVICE_RESTAPI_HOST: restapi.priv.<<.BaseDomain>>
+        SERVICE_SCHEDULER_HOST: scheduler.priv.<<.BaseDomain>>
+        SERVICE_SDS_HOST: sds.priv.<<.BaseDomain>>
+        SERVICE_WORKFLOW_HOST: workflow.priv.<<.BaseDomain>>
+      ports:
+        - 80:8080
+        - 8444:8444
+        - 50052:50052
+      volumes:
+        - /arena/pki:/arena/pki
+        - /arena/file_repo:/arena/file_repo
+        - /arena/tmpdir:/arena/tmpdir
+        - /arena/log:/arena/log
+      probes:
+        - curl -s -f --show-error "http://$HOSTNAME:80{{ healthcheck_endpoint }}"

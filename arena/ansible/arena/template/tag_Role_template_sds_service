@@ -1,0 +1,29 @@
+healthcheck_endpoint: /SYSTEM/dbtest
+service_name: sds
+ldap_access_group_suffix: webserver
+
+pod:
+  containers:
+    sds:
+      image_name: "{{ aws_ecr_registry }}/sds"
+      image_tag: "{{ lookup('aws_ssm', '/<<.Env>>/sds/image_tag') }}"
+      log_driver: json-file
+      environment:
+        CONFD_BACKEND: env
+        DB_HOST: db.priv.<<.BaseDomain>>
+        DB_NAME: <<.DbName>>
+        DB_PASSWORD: "{{ lookup('aws_ssm', '/<<.Env>>/db/password/sds_web') }}"
+        DB_USERNAME: sds_web
+        NAME: SDS_WEB_DEVAWS
+        PKI_PASSWORD: "{{ lookup('aws_ssm', '/pki/password/<<.Env>>') }}"
+        REDIS_HOST: redis.priv.<<.BaseDomain>>
+        SERVICE_ACS_HOST: bliss.priv.<<.BaseDomain>>
+      ports:
+        - 80:8000
+        - 8444:8444
+        - 50052:50052
+      volumes:
+        - /arena/pki:/arena/pki
+        - /arena/log:/arena/log
+      probes:
+        - curl -s -f --show-error "http://localhost:80{{ healthcheck_endpoint }}"

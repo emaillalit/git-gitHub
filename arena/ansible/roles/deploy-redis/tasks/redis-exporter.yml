@@ -1,0 +1,27 @@
+---
+- name: Stop redis-exporter container
+  ansible.builtin.shell: "docker stop redis-exporter || true"
+
+- name: Remove redis-exporter container
+  ansible.builtin.shell: "docker rm redis-exporter || true"
+
+- name: Pull redis-exporter image
+  docker_image:
+    name: "{{ aws_ecr_registry }}/utils/redis_exporter"
+    tag: "{{ redis_exporter_version }}"
+    source: pull
+
+- name: run redis-exporter container
+  docker_container:
+    name: redis-exporter
+    image: "{{ aws_ecr_registry }}/utils/redis_exporter:{{ redis_exporter_version }}"
+    network_mode: host
+    log_options:
+      max-size: "100m"
+      max-file: "5"
+
+- name: Check if redis-exporter continer up
+  uri:
+    url: http://localhost:9121/metrics
+    method: GET
+    status_code: 200

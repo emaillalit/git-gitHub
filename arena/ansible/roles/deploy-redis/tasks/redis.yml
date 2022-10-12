@@ -1,0 +1,26 @@
+---
+- name: install epel
+  ansible.builtin.shell: amazon-linux-extras install -y epel
+
+- name: install Redis
+  yum:
+    name: "{{ packages }}"
+    state: present
+  vars:
+    packages:
+    - redis
+
+- name: copy redis.conf
+  ansible.builtin.copy:
+    src: redis.conf
+    dest: /etc/redis.conf
+    owner: redis
+    group: redis
+    mode: '0660'
+  notify: restart redis
+
+- name: start Redis
+  ansible.builtin.service:
+    name: redis.service
+    state: started
+    enabled: yes

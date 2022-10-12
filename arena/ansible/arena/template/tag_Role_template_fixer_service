@@ -1,0 +1,20 @@
+healthcheck_endpoint: /SYSTEM/dbtest
+service_name: fixer
+ldap_access_group_suffix: webserver
+
+pod:
+  containers:
+    fixer:
+      image_name: "{{ aws_ecr_registry }}/fixer"
+      image_tag: "{{ lookup('aws_ssm', '/<<.Env>>/fixer/image_tag') }}"
+      log_driver: json-file
+      environment:
+        CONFD_BACKEND: env
+        DB_HOST: db.priv.<<.BaseDomain>>
+        DB_NAME: <<.DbName>>
+        DB_PASSWORD: "{{ lookup('aws_ssm', '/<<.Env>>/db/password/app') }}"
+        PKI_PASSWORD: "{{ lookup('aws_ssm', '/pki/password/<<.Env>>') }}"
+      ports:
+        - 80:8080
+      probes:
+        - curl -s -f --show-error "http://localhost:80{{ healthcheck_endpoint }}"

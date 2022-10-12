@@ -1,0 +1,40 @@
+---
+- name: Stop pod containers
+  ansible.builtin.shell: "docker stop {{item}} || true"
+  with_items: "{{ pod.containers.keys() }}"
+
+- name: Remove all containers
+  ansible.builtin.shell: "docker rm {{item}} || true"
+  with_items: "{{ pod.containers.keys() }}"
+
+- name: Pull images
+  docker_image:
+    name: "{{ pod.containers[item].image_name }}"
+    tag: "{{ pod.containers[item].image_tag }}"
+    source: pull
+  with_items: "{{ pod.containers.keys() }}"
+
+- name: Run containers
+  docker_container:
+    name: "{{ item }}"
+    image: "{{ pod.containers[item].image_name }}:{{ pod.containers[item].image_tag }}"
+    env: "{{ pod.containers[item].environment | default({}) }}"
+    volumes: "{{ pod.containers[item].volumes | default([]) }}"
+    state: started
+    restart_policy: unless-stopped
+    ports: "{{ pod.containers[item].ports }}"
+    log_driver: "{{ pod.containers[item].log_driver | default('json-file') }}"
+#    log_options: "{{ pod.containers[item].log_options | default({}) }}"
+    log_options:
+      max-size: "100m"
+      max-file: "5"
+  with_items: "{{ pod.containers.keys() }}"
+  no_log: True
+
+- name: Probe pod containers
+  ansible.builtin.command: "{{ item }}"
+  register: probe_status
+  until: probe_status.stdout.find("success") != -1
+  retries: 10
+  delay: 5
+  with_items: "[ {% for k, v in pod.containers.items() %} {% for p in v.get('probes', []) %} '{{ p }}', {% endfor %} {% endfor %} ]"

@@ -1,0 +1,12 @@
+---
+- name: install some basic packages
+  yum:
+    name: "{{ packages }}"
+  vars:
+    packages:
+    - jq
+    - tree
+    - git
+
+- name: Install ansible2 via amazon-linux-extras packages
+  ansible.builtin.shell: "amazon-linux-extras install ansible2 -y"

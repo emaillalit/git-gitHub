@@ -1,0 +1,138 @@
+global:
+  scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+  scrape_timeout:      10s
+  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+
+# A scrape configuration contains exactly one endpoint to scrape:
+# Here it's Prometheus itself.
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any time series scraped from this config.
+  - job_name: 'prometheus'
+    static_configs:
+      #- targets: ['localhost:9090']
+
+  - job_name: 'node-exporter'
+    ec2_sd_configs:
+      - region: {{ aws_region }}
+        port: 9100
+        filters:
+          - name: "tag:Role"
+            values:
+              - "{{ env_context }}-*-service"
+              - "{{ env_context }}-backstop-utility"
+              - "{{ env_context }}-bastion-utility"
+              - "{{ env_context }}-firstboot-utility"
+              - "{{ env_context }}-fluentd-utility"
+              - "{{ env_context }}-mail-utility"
+              - "{{ env_context }}-metrics-utility"
+              - "{{ env_context }}-rabbitmq-utility"
+              - "{{ env_context }}-redis-utility"
+    relabel_configs:
+      - source_labels: [__meta_ec2_tag_Role]
+        target_label: instance
+      - source_labels: [__meta_ec2_instance_id]
+        target_label: instance_id
+      - source_labels: [__meta_ec2_tag_Environment]
+        target_label: environment
+
+  - job_name: 'jmx-exporter'
+    ec2_sd_configs:
+      - region: {{ aws_region }}
+        port: 50052
+        filters:
+          - name: "tag:Role"
+            values:
+              - "{{ env_context }}-acct-service"
+              - "{{ env_context }}-auth-service"
+              - "{{ env_context }}-bliss-service"
+              - "{{ env_context }}-bms-service"
+              - "{{ env_context }}-collab-service"
+              - "{{ env_context }}-eos-service"
+              - "{{ env_context }}-gate-service"
+              - "{{ env_context }}-notify-service"
+              - "{{ env_context }}-orca-service"
+              - "{{ env_context }}-plm-service"
+              - "{{ env_context }}-pubmarket-service"
+              - "{{ env_context }}-restapi-service"
+              - "{{ env_context }}-scheduler-service"
+              - "{{ env_context }}-sds-service"
+              - "{{ env_context }}-trex-service"
+              - "{{ env_context }}-workflow-service"
+              - "{{ env_context }}-xray-service"
+    relabel_configs:
+      - source_labels: [__meta_ec2_tag_Role]
+        target_label: instance
+      - source_labels: [__meta_ec2_instance_id]
+        target_label: instance_id
+      - source_labels: [__meta_ec2_tag_Environment]
+        target_label: environment
+
+  - job_name: 'arena-exporter'
+    ec2_sd_configs:
+      - region: {{ aws_region }}
+        port: 8089
+        filters:
+          - name: "tag:Role"
+            values:
+              - "{{ env_context }}-metrics-utility"
+    relabel_configs:
+      - source_labels: [__meta_ec2_tag_Role]
+        target_label: instance
+
+  - job_name: 'cadvisor'
+    ec2_sd_configs:
+      - region: {{ aws_region }}
+        port: 50051
+        filters:
+          - name: "tag:Role"
+            values:
+              - "{{ env_context }}-*-service"
+              - "{{ env_context }}-rabbitmq-utility"
+    relabel_configs:
+      - source_labels: [__meta_ec2_tag_Role]
+        target_label: instance
+      - source_labels: [__meta_ec2_instance_id]
+        target_label: instance_id
+      - source_labels: [__meta_ec2_tag_Environment]
+        target_label: environment
+    metric_relabel_configs:
+      - action: labeldrop
+        regex: "container_label_(.+)"
+      - action: labeldrop
+        regex: "image"
+      #- source_labels: [name]
+      #  separator: ;
+      #  regex: "(cadvisor|node-exporter|fluent-bit|rabbitmq-exporter|redis-exporter)"
+      #  action: drop
+
+  - job_name: 'redis-exporter'
+    ec2_sd_configs:
+      - region: {{ aws_region }}
+        port: 9121
+        filters:
+          - name: "tag:Role"
+            values:
+              - "{{ env_context }}-redis-utility"
+    relabel_configs:
+      - source_labels: [__meta_ec2_tag_Role]
+        target_label: instance
+      - source_labels: [__meta_ec2_instance_id]
+        target_label: instance_id
+      - source_labels: [__meta_ec2_tag_Environment]
+        target_label: environment
+
+  - job_name: 'rabbitmq-exporter'
+    ec2_sd_configs:
+      - region: {{ aws_region }}
+        port: 9419
+        filters:
+          - name: "tag:Role"
+            values:
+              - "{{ env_context }}-rabbitmq-utility"
+    relabel_configs:
+      - source_labels: [__meta_ec2_tag_Role]
+        target_label: instance
+      - source_labels: [__meta_ec2_instance_id]
+        target_label: instance_id
+      - source_labels: [__meta_ec2_tag_Environment]
+        target_label: environment

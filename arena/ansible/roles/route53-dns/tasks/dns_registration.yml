@@ -1,0 +1,24 @@
+---
+- name: read the private hosted domain name from local file
+  ansible.builtin.shell: "grep base_domain_name /opt/arena/metadata.txt | cut -d: -f2"
+  register: base_domain_name
+  delegate_to: 127.0.0.1
+
+- name: create private forward DNS record for ec2 name
+  local_action:
+    module: route53
+    command: create
+    zone: "priv.{{ base_domain_name.stdout }}"
+    private_zone: yes
+    overwrite: yes
+    record: "{% if ec2_tag_Name is defined %}{{ ec2_tag_Name }}{% else %}{{ ec2_tag_Role }}-{{ ec2_id }}{% endif %}.priv.{{ base_domain_name.stdout }}"
+    ttl: 300
+    type: A
+    value: "{{ ec2_private_ip_address }}"
+  register: result_route53_ec2_name
+  until: result_route53_ec2_name is success
+  retries: 10
+  delay: 5
+
+- name: pausing to give DNS a moment to update...
+  local_action: pause seconds=10

@@ -1,0 +1,4 @@
+service_name: metrics
+ldap_access_group_suffix: ""
+
+es_cluster: <<.EsCluster>>

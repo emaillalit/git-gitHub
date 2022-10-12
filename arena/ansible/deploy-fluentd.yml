@@ -1,0 +1,12 @@
+---
+- hosts: 'tag_Role_{{ role }}'
+  roles:
+    - role: common
+      tags: common
+    - role: deploy-fluentd
+      tags: fluentd
+    - role: deploy-metrics-agent
+      tags: metrics-agent
+    - role: deploy-tmds-agent
+      tags:
+        - tmds-agent

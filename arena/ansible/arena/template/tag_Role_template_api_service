@@ -1,0 +1,64 @@
+healthcheck_endpoint: /SYSTEM/dbtest
+service_name: api
+ldap_access_group_suffix: webserver
+
+pod:
+  containers:
+    api:
+      image_name: "{{ aws_ecr_registry }}/api"
+      image_tag: "{{ lookup('aws_ssm', '/<<.Env>>/api/image_tag') }}"
+
+      # This config is utilized in role deploy-c14n-prod/tasks/services.yml
+      nofile: "nofile:1024:8192"
+
+      log_driver: json-file
+      
+      environment:
+        CONFD_BACKEND: env
+        COOKIE_DOMAIN: .<<.TldDomain>>
+        DB_HOST: db.priv.<<.BaseDomain>>
+        DB_NAME: <<.DbName>>
+        DB_PASSWORD: "{{ lookup('aws_ssm', '/<<.Env>>/db/password/app_web') }}"
+        EMAIL_DEFAULT_DOMAIN: <<.BaseDomain>>
+        EMAIL_ERROR_ALTERNATE: <<.FeedbackEmail>>
+        EMAIL_ERROR_DOMAIN: <<.BaseDomain>>
+        EMAIL_NOTIFICATION_SENDER: do-not-reply@<<.BaseDomain>>
+        EMAIL_RCPT_DOMAINS_ALLOWED: "<<.EmailRcptDomainsAllowed>>"
+        EMAIL_SENDER: proxy-mailer@<<.BaseDomain>>
+        EMAIL_SUBJECT_PREPEND: "<<.EmailSubjectPrepend>>"
+        EXECUTABLES_SENDMAIL: /usr/sbin/sendmail -C/arena/api/conf/ssmtp.conf -t
+        APPLICATION_MONITORING_EMAIL: <<.ApplicationMonitoringEmail>>
+        EXTERNAL_ADMIN_HOST: admin.<<.BaseDomain>>
+        EXTERNAL_API_HOST: api.<<.BaseDomain>>
+        EXTERNAL_APP_HOST: app.<<.BaseDomain>>
+        EXTERNAL_AUTH_HOST: auth.<<.BaseDomain>>
+        EXTERNAL_FILES_HOST: files.<<.BaseDomain>>
+        FEEDBACK_TICKETDEFAULTEMAIL: <<.FeedbackEmail>>
+        PKI_CLIENTCOMMONNAME: priv.<<.BaseDomain>>
+        PKI_PASSWORD: "{{ lookup('aws_ssm', '/pki/password/<<.Env>>') }}"
+        REDIRECT_DOMAINS: <<.TldDomain>>
+        REDIS_HOST: redis.priv.<<.BaseDomain>>
+        SALESFORCE_LEAD_URL: <<.SalesforceLeadURL>>
+        SALESFORCE_ARENA_ORG_ID: <<.SalesforceArenaOrgId>>
+        SALESFORCE_CUSTOMERPORTAL_LOGIN_URL: <<.SalesforceCustomerPortalLoginUrl>>
+        SALESFORCE_WEBTOCASEORIGIN: <<.SalesForceWebToCaseOrigin>>
+        SALESFORCE_WEBTOCASEURL: <<.SalesForceWebToCaseUrl>>
+        SERVICE_ADMIN_HOST: admin.priv.<<.BaseDomain>>
+        SERVICE_API_HOST: api.priv.<<.BaseDomain>>
+        SERVICE_APP_HOST: app.priv.<<.BaseDomain>>
+        SERVICE_AUTH_HOST: auth.priv.<<.BaseDomain>>
+        SERVICE_BLISS_HOST: bliss.priv.<<.BaseDomain>>
+        SERVICE_BMS_HOST: bms.priv.<<.BaseDomain>>
+        SERVICE_GATE_HOST: gate.priv.<<.BaseDomain>>
+        SERVICE_PLM_HOST: plm.priv.<<.BaseDomain>>
+        SERVICE_SDS_HOST: sds.priv.<<.BaseDomain>>
+        SERVICE_NOTIFY_HOST: notify.priv.<<.BaseDomain>>
+        SSMTP_MAILHUB: mail.priv.<<.BaseDomain>>
+      ports:
+        - 80:8080
+        - 8444:8444
+      volumes:
+        - /arena/pki:/arena/pki
+        - /arena/log:/arena/log
+      probes:
+        - curl -s -f --show-error "http://localhost:80{{ healthcheck_endpoint }}"

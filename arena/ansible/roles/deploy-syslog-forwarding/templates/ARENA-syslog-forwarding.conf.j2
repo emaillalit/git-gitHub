@@ -1,0 +1,20 @@
+{% if base_domain_name == "arenagov.com" %}
+# Arena customized configuration.
+#
+# audit log
+$ModLoad imfile
+$InputFileName /var/log/audit/audit.log
+$InputFileTag AUDIT_LOG:
+$InputFileStateFile audit_log
+$InputFileSeverity info
+$InputFileFacility local6
+$InputRunFileMonitor
+local6.* @@syslog-agent-audit.util.arenagov.com
+# All logs other than Audit logs.
+*.*,local6.none @@syslog-agent-system.util.arenagov.com
+
+{% else %}
+$PreserveFQDN on
+*.* @@syslog.util.aws.bom.com:514
+
+{% endif %}

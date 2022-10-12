@@ -1,0 +1,24 @@
+---
+- name: Copy ec2-search.j2
+  ansible.builtin.template:
+    src: ec2-search.j2
+    dest: /usr/local/bin/ec2-search
+    mode: 0755
+
+- name: Copy IQ-test.j2
+  ansible.builtin.template:
+    src: IQ-test.j2
+    dest: /usr/local/bin/IQ-test
+    mode: 0755
+
+- name: Copy Internal-iq-check.j2
+  ansible.builtin.template:
+    src: internal-iq-check.j2
+    dest: /usr/local/bin/internal-iq-check
+    mode: 0755
+
+- name: Copy doredis.j2
+  ansible.builtin.template:
+    src: doredis.j2
+    dest: /usr/local/bin/doredis
+    mode: 0755

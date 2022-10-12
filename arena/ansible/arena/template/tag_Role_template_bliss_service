@@ -1,0 +1,34 @@
+healthcheck_endpoint: /SYSTEM/dbtest
+service_name: bliss
+ldap_access_group_suffix: webserver
+
+pod:
+  containers:
+    bliss:
+      image_name: "{{ aws_ecr_registry }}/bliss"
+      image_tag: "{{ lookup('aws_ssm', '/<<.Env>>/bliss/image_tag') }}"
+      log_driver: json-file
+      environment:
+        CONFD_BACKEND: env
+        DB_HOST: db.priv.<<.BaseDomain>>
+        DB_NAME: <<.DbName>>
+        DB_PASSWORD: "{{ lookup('aws_ssm', '/<<.Env>>/db/password/app_web') }}"
+        DB_USERNAME: app_web
+        MODULE_ACS_DB_HOST: db.priv.<<.BaseDomain>>
+        MODULE_ACS_DB_NAME: <<.DbName>>
+        MODULE_ACS_DB_PASSWORD: "{{ lookup('aws_ssm', '/<<.Env>>/db/password/acs_web') }}"
+        MODULE_ACS_DB_USERNAME: acs_web
+        NAME: BLISS_WEB_DEVAWS
+        PKI_PASSWORD: "{{ lookup('aws_ssm', '/pki/password/<<.Env>>') }}"
+        REDIS_HOST: redis.priv.<<.BaseDomain>>
+        REDIS_PORT: "6379"
+        PRIVATE_HOST: "0.0.0.0"
+        PRIVATE_PORT: "8000"
+      ports:
+        - 80:8000
+        - 50052:50052
+      volumes:
+        - /arena/pki:/arena/pki
+        - /arena/log:/arena/log
+      probes:
+        - curl -s -f --show-error "http://localhost:80{{ healthcheck_endpoint }}"

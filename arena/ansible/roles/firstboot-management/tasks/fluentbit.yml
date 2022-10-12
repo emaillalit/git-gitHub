@@ -1,0 +1,29 @@
+---
+- name: add td-agent-bit repo
+  ansible.builtin.copy:
+    src: td-agent-bit.repo
+    dest: /etc/yum.repos.d/td-agent-bit.repo
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: install td-agent-bit
+  yum:
+    name: td-agent-bit
+    state: present
+
+- name: copy the td-agent-bit.conf
+  ansible.builtin.template:
+    src: td-agent-bit.conf.j2
+    dest: /etc/td-agent-bit/td-agent-bit.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - restart td-agent-bit
+
+- name: start td-agent-bit
+  ansible.builtin.service:
+    name: td-agent-bit
+    state: started
+    enabled: yes

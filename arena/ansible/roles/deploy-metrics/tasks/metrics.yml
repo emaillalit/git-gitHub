@@ -1,0 +1,52 @@
+---
+
+- name: Pull prometheus images
+  docker_image:
+    name: "prom/prometheus"
+    tag: "latest"
+    source: pull
+
+- name: Create prometheus config path
+  ansible.builtin.file:
+    path: "/data/prometheus/conf"
+    owner: root
+    group: root
+    state: directory
+
+- name: Copy prometheus.yml
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: "/data/prometheus/conf/prometheus.yml"
+    mode: '0755'
+
+- name: Pull prometheus images
+  docker_image:
+    name: "{{ aws_ecr_registry }}/utils/prometheus"
+    tag: "{{ prometheus_version }}"
+    source: pull
+
+- name: run prometheus container
+  docker_container:
+    name: prometheus
+    image: "{{ aws_ecr_registry }}/utils/prometheus:{{ prometheus_version }}"
+    entrypoint:
+      - prometheus
+      - --web.enable-lifecycle
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/prometheus/consoles
+      - --storage.tsdb.retention.time=7d
+    network_mode: host
+    log_options:
+      max-size: "100m"
+      max-file: "5"
+    volumes:
+      - "/data/prometheus/conf/prometheus.yml:/etc/prometheus/prometheus.yml"
+
+- name: check prometheus alive
+  uri:
+    url: http://localhost:9090/metrics
+    method: GET
+    status_code:
+      - 200

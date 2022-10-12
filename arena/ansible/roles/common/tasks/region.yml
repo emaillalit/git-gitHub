@@ -1,0 +1,6 @@
+---
+- name: Copy set_aws_region.sh
+  ansible.builtin.copy: src=set_aws_region.sh dest=/etc/profile.d/set_aws_region.sh mode=0755
+
+- name: Set AWS Region
+  ansible.builtin.shell: source /etc/profile.d/set_aws_region.sh

@@ -1,0 +1,27 @@
+healthcheck_endpoint: /SYSTEM/dbtest
+service_name: orca
+ldap_access_group_suffix: webserver
+
+pod:
+  containers:
+    orca:
+      image_name: "{{ aws_ecr_registry }}/orca"
+      image_tag: "{{ lookup('aws_ssm', '/<<.Env>>/orca/image_tag') }}"
+      log_driver: json-file
+      environment:
+        CONFD_BACKEND: env
+        RUNMODE_ACTIVE: "<<.IsProd>>"
+        SERVICE_ACS_HOST: bliss.priv.<<.BaseDomain>>
+        DB_HOST: db.priv.<<.BaseDomain>>
+        DB_NAME: <<.DbName>>
+        DB_PASSWORD: "{{ lookup('aws_ssm', '/<<.Env>>/db/password/plm_web') }}"
+        PKI_PASSWORD: "{{ lookup('aws_ssm', '/pki/password/<<.Env>>') }}"
+      ports:
+        - 80:8080
+        - 8444:8444
+        - 50052:50052
+      volumes:
+        - /arena/pki:/arena/pki
+        - /arena/log:/arena/log
+      probes:
+        - curl -s -f --show-error "http://localhost:80{{ healthcheck_endpoint }}"

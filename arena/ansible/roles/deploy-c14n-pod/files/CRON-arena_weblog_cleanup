@@ -1,0 +1,1 @@
+0 9 * * * root retain_days=1; find /arena/log -type f -name '*access.log*' ! -newerct $(date -d "${retain_days} days ago" '+\%Y-\%m-\%d') -print | xargs -r -- rm

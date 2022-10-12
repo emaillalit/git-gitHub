@@ -1,0 +1,5 @@
+---
+- name: Change content of the complete marker file
+  ansible.builtin.copy:
+    content: 'complete'
+    dest: /tmp/bastion-management.txt

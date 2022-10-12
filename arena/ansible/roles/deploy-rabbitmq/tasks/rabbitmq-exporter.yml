@@ -1,0 +1,45 @@
+---
+- name: Stop rabbitmq-exporter container
+  ansible.builtin.shell: "docker stop rabbitmq-exporter || true"
+
+- name: Remove rabbitmq-exporter container
+  ansible.builtin.shell: "docker rm rabbitmq-exporter || true"
+
+- name: Create config path for rabbitmq-exporter
+  ansible.builtin.file:
+    path: "/data/config"
+    owner: root
+    group: root
+    state: directory
+
+- name: Copy rabbitmq-config.json for rabbitmq-exporter
+  ansible.builtin.copy:
+    src: rabbitmq-config.json
+    dest: /data/config/rabbitmq-config.json
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Pull rabbitmq-exporter images
+  docker_image:
+    name: "{{ aws_ecr_registry }}/utils/rabbitmq-exporter"
+    tag: "{{ rabbitmq_exporter_version }}"
+    source: pull
+
+- name: run rabbitmq-exporter container
+  docker_container:
+    name: rabbitmq-exporter
+    image: "{{ aws_ecr_registry }}/utils/rabbitmq-exporter:{{ rabbitmq_exporter_version }}"
+    network_mode: host
+    command: "-config-file /etc/rabbitmq/rabbitmq-config.json"
+    volumes:
+      - "/data/config/rabbitmq-config.json:/etc/rabbitmq/rabbitmq-config.json"
+    log_options:
+      max-size: "100m"
+      max-file: "5"
+
+- name: Check if rabbitmq-exporter continer up
+  uri:
+    url: http://localhost:9419/metrics
+    method: GET
+    status_code: 200

@@ -1,0 +1,22 @@
+#!/bin/bash
+
+MOUNT_POINT="/home/ARENA"
+
+echo "Mounting AWS EBS to directory ${MOUNT_POINT}"
+
+mountpoint -q ${MOUNT_POINT}
+if [ $? -ne 0 ]; then
+
+	# Create mount point target
+	mkdir -p ${MOUNT_POINT}
+
+	# Mount the filesystem {{ ebs_device }} to /home for the mean time
+	mount {{ ebs_device }} ${MOUNT_POINT}
+
+	# Make the changes permanet
+	echo "{{ ebs_device }}  ${MOUNT_POINT}  xfs  defaults,nofail  0  2" >> /etc/fstab
+else
+	echo "Directory ${MOUNT_POINT} is already a valid mountpoint!"
+fi
+
+echo "EBS mount complete."

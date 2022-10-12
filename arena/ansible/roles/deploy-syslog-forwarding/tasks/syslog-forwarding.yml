@@ -1,0 +1,13 @@
+---
+- name: copy ARENA-syslog-forwarding.conf
+  ansible.builtin.template:
+    src: ARENA-syslog-forwarding.conf.j2
+    dest: /etc/rsyslog.d/ARENA-syslog-forwarding.conf
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: restart rsyslog
+  ansible.builtin.service:
+    name: rsyslog.service
+    state: restarted

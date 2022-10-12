@@ -1,0 +1,135 @@
+#!/bin/bash
+
+ENV_NAME={{ env_context }}
+SERVICE_NAME={{ service_name }}
+ENV_SHORT={{ env }}
+AWS_REGION={{ aws_region }}
+
+ANTI_VIRUS_MODE=$(aws ssm get-parameter --name "/${ENV_SHORT}/antivirus/mode" --region "$AWS_REGION" | jq -r '.Parameter.Value')
+
+if [[ "$ANTI_VIRUS_MODE" == "off" ]];then
+  echo "The ssm /${ENV_SHORT}/antivirus/mode set off, so skip."
+  exit 0
+fi
+
+case $ENV_NAME in
+  arenagov | awsgvc )
+    dsm_domain_name="dsm.util.arenagov.com"
+    ;;
+  * )
+    dsm_domain_name="dsm.util.aws.bom.com"
+    ;;
+esac
+
+case $SERVICE_NAME in
+  mail | bastion | fluentd | metrics | syslog | firstboot )
+    DSM_POLICY_ID={{ dsm_policy_id_other }}
+    DSM_GROUP_ID={{ dsm_group_id_other }}
+    SERVICE_CATEGORY="utility"
+    ;;
+  redis | rabbitmq | backstop )
+    DSM_POLICY_ID={{ dsm_policy_id_web_servers_other }}
+    DSM_GROUP_ID={{ dsm_group_id_web_servers_other }}
+    SERVICE_CATEGORY="utility"
+    ;;
+  * )
+    DSM_POLICY_ID={{ dsm_policy_id_web_servers_auto_scale }}
+    DSM_GROUP_ID={{ dsm_group_id_web_servers_auto_scale }}
+    SERVICE_CATEGORY="service"
+    ;;
+esac
+
+ACTIVATIONURL="dsm://$dsm_domain_name:4120/"
+MANAGERURL="https://$dsm_domain_name:4119"
+CURLOPTIONS='--silent --tlsv1.2'
+linuxPlatform='';
+isRPM='';
+if [[ $(/usr/bin/id -u) -ne 0 ]]; then
+    echo You are not running as the root user.  Please try again with root privileges.;
+    logger -t You are not running as the root user.  Please try again with root privileges.;
+    exit 1;
+fi;
+rm -f /tmp/PlatformDetection
+rm -f /tmp/agent.*
+if ! type curl >/dev/null 2>&1; then
+    echo "Please install CURL before running this script."
+    logger -t Please install CURL before running this script
+    exit 1
+fi
+curl $MANAGERURL/software/deploymentscript/platform/linuxdetectscriptv1/ -o /tmp/PlatformDetection $CURLOPTIONS --insecure
+curlRet=$?
+if [[ $curlRet == 0 && -s /tmp/PlatformDetection ]]; then
+    . /tmp/PlatformDetection
+elif [[ $curlRet -eq 60 ]]; then
+    echo "TLS certificate validation for the agent package download has failed. Please check that your Deep Security Manager TLS certificate is signed by a trusted root certificate authority. For more information, search for \"deployment scripts\" in the Deep Security Help Center."
+    logger -t TLS certificate validation for the agent package download has failed. Please check that your Deep Security Manager TLS certificate is signed by a trusted root certificate authority. For more information, search for \"deployment scripts\" in the Deep Security Help Center.
+    exit 1;
+else
+    echo "Failed to download the agent installation support script."
+    logger -t Failed to download the Deep Security Agent installation support script
+    exit 1
+fi
+platform_detect
+if [[ -z "${linuxPlatform}" ]] || [[ -z "${isRPM}" ]]; then
+    echo Unsupported platform is detected
+    logger -t Unsupported platform is detected
+    exit 1
+fi
+echo Downloading agent package...
+if [[ $isRPM == 1 ]]; then package='agent.rpm'
+    else package='agent.deb'
+fi
+curl -H "Agent-Version-Control: on" $MANAGERURL/software/agent/${runningPlatform}${majorVersion}/${archType}/$package?tenantID= -o /tmp/$package $CURLOPTIONS --insecure
+curlRet=$?
+isPackageDownloaded='No'
+if [ $curlRet -eq 0 ];then
+    if [[ $isRPM == 1 && -s /tmp/agent.rpm ]]; then
+        file /tmp/agent.rpm | grep "RPM";
+        if [ $? -eq 0 ]; then
+            isPackageDownloaded='RPM'
+        fi
+    elif [[ -s /tmp/agent.deb ]]; then
+        file /tmp/agent.deb | grep "Debian";
+        if [ $? -eq 0 ]; then
+            isPackageDownloaded='DEB'
+        fi
+    fi
+fi
+
+rpm -qa | grep ds_agent
+installation_res=$?
+if [[ $installation_res -eq 0 ]];then
+  echo "The ds agent has been installed, so proceed."
+else
+  echo Installing agent package...
+  rc=1
+  if [[ ${isPackageDownloaded} = 'RPM' ]]; then
+      rpm -ihv /tmp/agent.rpm
+      rc=$?
+  elif [[ ${isPackageDownloaded} = 'DEB' ]]; then
+      dpkg -i /tmp/agent.deb
+      rc=$?
+  else
+      echo Failed to download the agent package. Please make sure the package is imported in the Deep Security Manager
+      logger -t Failed to download the agent package. Please make sure the package is imported in the Deep Security Manager
+      exit 1
+  fi
+  if [[ ${rc} != 0 ]]; then
+      echo Failed to install the agent package
+      logger -t Failed to install the agent package
+      exit 1
+  fi
+  echo Install the agent package successfully
+  sleep 15
+  /opt/ds_agent/dsa_control -r
+  /opt/ds_agent/dsa_control -a $ACTIVATIONURL "policyid:${DSM_POLICY_ID}" "groupid:${DSM_GROUP_ID}" "displayname:{{ instance_id }}" "description:${ENV_NAME}-${SERVICE_NAME}-${SERVICE_CATEGORY}"
+fi
+
+
+if [[ "$ANTI_VIRUS_MODE" == "test" ]];then
+  echo "The ssm /${ENV_SHORT}/antivirus/mode set test, so erase tmds."
+  /opt/ds_agent/dsa_control -r
+  yum erase -y ds_agent
+  echo 'DeepSecurity Agent resetted (de-activated)'
+fi
+

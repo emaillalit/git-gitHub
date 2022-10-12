@@ -1,0 +1,8 @@
+---
+- name: Copy arena_prompt.sh
+  ansible.builtin.template:
+    src: arena_prompt.sh.j2
+    dest: /etc/profile.d/arena_prompt.sh
+    mode: 0644
+    owner: root
+    group: root

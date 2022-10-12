@@ -1,0 +1,16 @@
+---
+- name: copy port-forwarding setup script
+  ansible.builtin.copy:
+    src: SSHD-enable-port-forwarding.sh
+    dest: /tmp/SSHD-enable-port-forwarding.sh
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Execute port-forwarding setup script
+  ansible.builtin.shell: /tmp/SSHD-enable-port-forwarding.sh
+
+- name: Remove port-forwarding setup script
+  ansible.builtin.file:
+    path: /tmp/SSHD-enable-port-forwarding.sh
+    state: absent

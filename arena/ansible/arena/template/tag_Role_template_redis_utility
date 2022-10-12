@@ -1,0 +1,2 @@
+service_name: redis
+ldap_access_group_suffix: ""

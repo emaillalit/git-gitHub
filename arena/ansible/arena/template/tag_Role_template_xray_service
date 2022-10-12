@@ -1,0 +1,33 @@
+healthcheck_endpoint: /SYSTEM/dbtest
+service_name: xray
+ldap_access_group_suffix: webserver
+
+pod:
+  containers:
+    xray:
+      image_name: "{{ aws_ecr_registry }}/xray"
+      image_tag: "{{ lookup('aws_ssm', '/<<.Env>>/xray/image_tag') }}"
+      log_driver: json-file
+      environment:
+        CONFD_BACKEND: env
+        DB_HOST: db.priv.<<.BaseDomain>>
+        DB_NAME: <<.DbName>>
+        DB_PASSWORD: "{{ lookup('aws_ssm', '/<<.Env>>/db/password/plm_web') }}"
+        DB_USERNAME: plm_web
+        PKI_PASSWORD: "{{ lookup('aws_ssm', '/pki/password/<<.Env>>') }}"
+        REDIS_HOST: redis.priv.<<.BaseDomain>>
+        RUNMODE_ACTIVE: "<<.IsProd>>"
+        SERVICE_ACS_HOST: bliss.priv.<<.BaseDomain>>
+        SERVICE_ACS_PORT: "80"
+        SERVICE_FILES_HOST: gate.priv.<<.BaseDomain>>
+        SERVICE_SDS_HOST: sds.priv.<<.BaseDomain>>
+        SERVICE_WORKFLOW_HOST: workflow.priv.<<.BaseDomain>>
+      ports:
+        - 80:8080
+        - 8444:8444
+        - 50052:50052
+      volumes:
+        - /arena/pki:/arena/pki
+        - /arena/log:/arena/log
+      probes:
+        - curl -s -f --show-error "http://localhost:80{{ healthcheck_endpoint }}"

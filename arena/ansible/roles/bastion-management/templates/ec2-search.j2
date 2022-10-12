@@ -1,0 +1,4 @@
+#!/bin/bash
+
+aws ec2 describe-instances --filters "Name=tag:ServiceName,Values=$1" | jq -r ".Reservations[].Instances[] | {Name: .Tags[]|select (.Key == \"Name\") | .Value, InstanceID: .InstanceId, InstanceType: .InstanceType, PrivateIP: .PrivateIpAddress, KeyName: .KeyName, State: .State.Name, LaunchTime: .LaunchTime}" | jq '. | select(.State=="terminated" | not) | select (.Name | startswith("{{ env_context }}-"))'
+

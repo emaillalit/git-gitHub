@@ -1,0 +1,61 @@
+---
+- name: create weblogs user
+  ansible.builtin.user:
+    name: weblogs
+    comment: for project legs
+    create_home: true
+    home: /home/ARENA/weblogs
+    uid: 402
+    group: 9999
+    shell: /bin/bash
+
+- name: change weblogs password
+  ansible.builtin.shell: |
+    weblogs_pass=$(aws ssm get-parameter --name /legs/weblogs/password --with-decryption --region {{ aws_region }} | jq -r .Parameter.Value)
+    echo $weblogs_pass | passwd weblogs --stdin
+
+- name: install java 8
+  ansible.builtin.shell: yum install -y java-1.8.0
+
+- name: initialize
+  ansible.builtin.template:
+    src: init-weblogs.sh
+    dest: /tmp/init-weblogs.sh
+    owner: weblogs
+    mode: '0755'
+
+- name: run the init.sh
+  ansible.builtin.shell: su - weblogs -c "/tmp/init-weblogs.sh"
+
+- name: copy prepare-logs-jar.sh
+  ansible.builtin.template:
+    src: prepare-logs-jar.sh
+    dest: /tmp/prepare-logs-jar.sh
+    owner: weblogs
+    mode: '0755'
+
+- name: trigger prepare-logs-jar.sh
+  ansible.builtin.cron:
+    name: "pull logs and sync jar file"
+    user: weblogs
+    minute: "0"
+    hour: "0"
+    job: "/tmp/prepare-logs-jar.sh > ~/prepare-logs-jar.log 2>&1"
+    state: present
+
+- name: trigger refresh_and_start
+  ansible.builtin.cron:
+    name: "trigger the legs project"
+    user: weblogs
+    minute: "0"
+    hour: "1"
+    job: "export LC_ALL=en_US.UTF-8 && export LANG=en_US.UTF-8 && ~/legs/refresh_and_start {{ env }} > ~/run-legs.log 2>&1"
+    state: present
+
+- name: copy mail command
+  ansible.builtin.template:
+    src: mail
+    dest: /usr/bin/mail
+    owner: weblogs
+    mode: '0755'
+    

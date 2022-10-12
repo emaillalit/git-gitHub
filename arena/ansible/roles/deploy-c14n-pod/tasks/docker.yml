@@ -1,0 +1,21 @@
+---
+- name: AWS ECR login
+  ansible.builtin.command: aws ecr get-login --no-include-email
+  register: command_output
+  become: yes
+  become_user: firstboot
+  no_log: True
+
+- name: Docker login
+  ansible.builtin.command: "{{command_output.stdout}}"
+  no_log: True
+
+- name: Create log directory
+  ansible.builtin.file:
+    path: "/arena/log"
+    owner: firstboot
+    group: firstboot
+    state: directory
+    mode: 0777
+  with_items: "{{ pod.containers.keys() }}"
+  when: pod.containers[item].volumes is defined

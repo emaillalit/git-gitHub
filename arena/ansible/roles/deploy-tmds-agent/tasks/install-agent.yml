@@ -1,0 +1,19 @@
+---
+- name: Copy install-agent.sh
+  ansible.builtin.template:
+    src: install-agent.sh.j2
+    dest: /tmp/install-agent.sh
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Install Trend Micro Deep Security Agent
+  ansible.builtin.shell: /tmp/install-agent.sh >> /tmp/install-tmds-agent.log
+  ignore_errors: yes
+  args:
+    chdir: /tmp/
+
+- name: Remove install-agent.sh file
+  ansible.builtin.file:
+    path: /tmp/install-agent.sh
+    state: absent

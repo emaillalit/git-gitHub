@@ -1,0 +1,64 @@
+#!/bin/bash
+
+function exit_usage {
+  cat >&2 <<EOF
+
+Usage: $0 -s "message" "someone@example.com"
+
+EOF
+  exit 1
+}
+
+[[ $# == 0 ]] && exit_usage
+
+
+while true; do
+  case "$1" in
+    -s )
+      [[ ( -z $2 ) || ( $2 == -* ) ]] && exit_usage
+      content="$2"
+      shift 2
+      ;;
+    -* )
+      exit_usage
+      ;;
+    * )
+      break
+      ;;
+  esac
+done
+
+recipients="$1"
+shift 1
+
+echo "$content $recipients "
+
+[[ -n "$content" ]] || exit_usage
+
+[[ -n "$recipients" ]] || exit_usage
+
+[[ $# == 0 ]] || exit_usage
+
+
+message=$(
+  cat <<EOF
+{
+  "Subject": {
+    "Data": "{{ env }} legs mail",
+    "Charset": "UTF-8"
+  },
+  "Body": {
+    "Html": {
+      "Data": "$content",
+      "Charset": "UTF-8"
+    }
+  }
+}
+EOF
+)
+
+
+aws ses send-email \
+  --from "legs@{{ base_domain_name }}" \
+  --destination ToAddresses="$recipients" \
+  --message "$message" --region {{ aws_region }} | cat

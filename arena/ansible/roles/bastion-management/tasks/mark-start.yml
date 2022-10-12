@@ -1,0 +1,5 @@
+---
+- name: Create a starting marker file
+  ansible.builtin.copy:
+    content: 'provisioning'
+    dest: /tmp/bastion-management.txt

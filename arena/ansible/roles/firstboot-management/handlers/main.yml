@@ -1,0 +1,5 @@
+---
+- name: restart td-agent-bit
+  ansible.builtin.service:
+    name: td-agent-bit
+    state: restarted

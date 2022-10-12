@@ -1,0 +1,24 @@
+---
+- name: Copy check-instance-status.sh.j2
+  ansible.builtin.template:
+    src: check-instance-status.sh.j2
+    dest: /usr/local/sbin/check-instance-status.sh
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: check the instance status and decide if stop the service container
+  ansible.builtin.cron:
+    name: "check instance status"
+    user: root
+    minute: "*/1"
+    job: "/usr/local/sbin/check-instance-status.sh"
+    state: present
+
+- name: Copy arena_weblog_cleanup cronjob file
+  ansible.builtin.copy:
+    src: "CRON-arena_weblog_cleanup"
+    dest: /etc/cron.d/arena_weblog_cleanup
+    owner: root
+    group: root
+    mode: '0400'

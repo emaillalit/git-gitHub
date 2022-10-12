@@ -1,0 +1,30 @@
+---
+plugin: aws_ec2
+
+regions:
+  - "region_template"
+
+filters:
+  tag:Role:
+    - "role_template"
+  instance-state-name : running
+
+keyed_groups:
+  - prefix: tag_Role
+    key: tags['Role']
+
+hostnames:
+  - 'private-dns-name'
+
+compose:
+  # vars needed for ansible ec2
+  instance_id: instance_id
+  ec2_id: instance_id
+  ec2_tag_Name: tags.Name
+  ec2_tag_Role: tags.Role
+  ec2_tag_ServiceName: tags.ServiceName
+  ec2_tag_Environment: tags.Environment
+  ec2_tag_Category: tags.Category
+  ec2_tag_Monitoring: tags.Monitoring
+  aws_region: placement.region
+  ec2_private_ip_address: private_ip_address

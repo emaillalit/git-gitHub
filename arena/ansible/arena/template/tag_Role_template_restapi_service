@@ -1,0 +1,44 @@
+healthcheck_endpoint: /SYSTEM/dbtest
+service_name: restapi
+ldap_access_group_suffix: webserver
+
+pod:
+  containers:
+    restapi:
+      image_name: "{{ aws_ecr_registry }}/restapi"
+      image_tag: "{{ lookup('aws_ssm', '/<<.Env>>/restapi/image_tag') }}"
+      log_driver: json-file
+      environment:
+        AWS_REGION: <<.Region>>
+        CONFD_BACKEND: env
+        DB_HOST: db.priv.<<.BaseDomain>>
+        DB_NAME: <<.DbName>>
+        DB_PASSWORD: "{{ lookup('aws_ssm', '/<<.Env>>/db/password/plm_web') }}"
+        EXTERNAL_API_HOST: api.<<.BaseDomain>>
+        EXTERNAL_APP_HOST: app.<<.BaseDomain>>
+        EXTERNAL_FILES_HOST: files.<<.BaseDomain>>
+        EXTERNAL_API_HOST: api.<<.BaseDomain>>
+        EXTERNAL_APP_HOST: app.<<.BaseDomain>>
+        HTTP_HEADERS_SOURCEIP: "<<.HttpHeadersSourceIp>>"
+        LOGGING_DEFAULT: "DEBUG"
+        PKI_PASSWORD: "{{ lookup('aws_ssm', '/pki/password/<<.Env>>') }}"
+        REDIS_HOST: redis.priv.<<.BaseDomain>>
+        SERVICE_API_HOST: api.priv.<<.BaseDomain>>
+        SERVICE_APP_HOST: app.priv.<<.BaseDomain>>
+        SERVICE_AUTH_HOST: auth.priv.<<.BaseDomain>>
+        SERVICE_BLISS_HOST: bliss.priv.<<.BaseDomain>>
+        SERVICE_EOS_HOST: eos.priv.<<.BaseDomain>>
+        SERVICE_FILES_HOST: gate.priv.<<.BaseDomain>>
+        SERVICE_NOTIFY_HOST: notify.priv.<<.BaseDomain>>
+        SERVICE_SDS_HOST: sds.priv.<<.BaseDomain>>
+        SERVICE_ACCT_HOST: acct.priv.<<.BaseDomain>>
+        SERVICE_WORKFLOW_HOST: workflow.priv.<<.BaseDomain>>
+      ports:
+        - 80:8080
+        - 8444:8444
+        - 50052:50052
+      volumes:
+        - /arena/pki:/arena/pki
+        - /arena/log:/arena/log
+      probes:
+        - curl -s -f --show-error "http://localhost:80{{ healthcheck_endpoint }}"

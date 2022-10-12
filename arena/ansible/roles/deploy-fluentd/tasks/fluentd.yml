@@ -1,0 +1,20 @@
+---
+- name: install td-agent
+  ansible.builtin.shell: curl -L https://toolbelt.treasuredata.com/sh/install-amazon2-td-agent3.sh | sh
+
+- name: copy td-agent configuration file
+  ansible.builtin.template:
+    src: td-agent.conf.j2
+    dest: /etc/td-agent/td-agent.conf
+    owner: td-agent
+    group: td-agent
+    mode: '0664'
+  notify:
+    - restart fluentd
+
+- name: start td-agent
+  ansible.builtin.service:
+    name: td-agent
+    state: started
+    enabled: yes
+

@@ -1,0 +1,45 @@
+####
+## Source descriptions:
+##
+
+## Receive the forward logs
+<source>
+  @type forward
+  port 24224
+  bind 0.0.0.0
+</source>
+
+## match all logs
+<match {{ env_context }}-**>
+  @type copy
+  <store>
+    @type elasticsearch
+    include_tag_key true
+    tag_key fluent-bit-tag
+    hosts {{ es_cluster }}
+    logstash_format true
+    logstash_prefix {{ env_context }}-container-logs
+    buffer_type memory
+    flush_mode: interval
+    flush_interval 60s
+    retry_limit 17
+    retry_wait 1.0
+    num_threads 1
+  </store>
+  <store>
+    @type s3
+    s3_bucket {{ env_context }}-weblogs.{{ aws_region }}.{{ aws_account_id }}
+    s3_region {{ aws_region }}
+    path container-logs/${tag}/%Y/%m/%d/
+    s3_object_key_format %{path}%{time_slice}_%{index}.%{file_extension}
+    <buffer tag,time>
+      @type file
+      path /var/log/td-agent/s3
+      timekey 60 # 1 minute partition
+      timekey_wait 30s
+      timekey_use_utc true # use utc
+      chunk_limit_size 50g
+    </buffer>
+  </store>
+
+</match>

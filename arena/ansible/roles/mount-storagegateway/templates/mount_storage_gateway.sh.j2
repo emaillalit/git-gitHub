@@ -1,0 +1,63 @@
+#!/bin/bash -x
+
+export AWS_DEFAULT_REGION={{ aws_region }}
+
+instance_info=$(aws ec2 describe-instances --filters "Name=tag:ServiceName, Values=storage-gateway" "Name=tag:Environment, Values={{ env_context }}" "Name=instance-state-name, Values=running")
+if [[ $? == 0 ]];then
+	storage_gateway_private_ip=$(echo $instance_info | jq -r '.Reservations[0].Instances[0].PrivateIpAddress')
+fi
+
+function mount_storage_gateway_to_path() {
+	mount_path=$1
+	bucket_name=$2
+	echo "Mounting NFS filesystem to directory $1"
+	echo "Checking if NFS mount directory exists..."
+	if [ ! -d $mount_path ]; then
+		echo "Creating directory $mount_path..."
+		mkdir -p $mount_path
+		if [ $? -ne 0 ]; then
+			echo "ERROR: Directory creation failed!"
+			exit 1
+		fi
+	else
+		echo "Directory $mount_path already exists!"
+		umount $mount_path
+	fi
+
+	mountpoint -q $1
+	if [ $? -ne 0 ]; then
+		echo "mount -t nfs -o nolock,hard $storage_gateway_private_ip:/$bucket_name $mount_path"
+		mount -t nfs -o nolock,hard $storage_gateway_private_ip:/$bucket_name $mount_path
+		if [ $? -ne 0 ]; then
+			echo "ERROR: Mount command failed!"
+			exit 1
+		fi
+		chmod 777 $mount_path
+		runuser -l ec2-user -c "touch $mount_path/it_works"
+		if [[ $? -ne 0 ]]; then
+			echo "ERROR: Permission Error!"
+			exit 1
+		else
+			runuser -l ec2-user -c "rm -f $mount_path/it_works"
+		fi
+	else
+		echo "Directory $mount_path is already a valid mountpoint!"
+	fi
+
+	echo "NFS mount complete."
+}
+
+echo 'Stopping NFS ID Mapper...'
+systemctl -q is-active nfs-idmapd.service
+if [ $? -ne 0 ] ; then
+	echo 'nfs-idmapd.service is already stopped!'
+else
+	systemctl stop nfs-idmapd
+	if [ $? -ne 0 ] ; then
+		echo 'ERROR: Failed to stop NFS ID Mapper!'
+		exit 1
+	fi
+fi
+
+mount_storage_gateway_to_path /arena/file_repo {{ env_context }}-files-repo.{{ aws_region }}.{{ aws_account_id }}
+mount_storage_gateway_to_path /arena/tmpdir    {{ env_context }}-files-tmpdir.{{ aws_region }}.{{ aws_account_id }}

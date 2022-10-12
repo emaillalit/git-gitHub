@@ -1,0 +1,49 @@
+---
+- name: install sssd and other required packages
+  yum:
+    name: "{{ packages }}"
+  vars:
+    packages:
+      - sssd
+      - oddjob
+      - oddjob-mkhomedir
+
+- name: start oddjob
+  ansible.builtin.service:
+    name: oddjobd.service
+    state: started
+    enabled: yes
+
+- name: Copy sssd_setup folder for scripts.
+  ansible.builtin.copy:
+    src: sssd_setup
+    dest: /tmp/
+    owner: root
+    group: root
+    mode: '0750'
+
+- name: Update pam auth to use SSSD.
+  ansible.builtin.shell: /usr/sbin/authconfig --enablesssdauth --update
+
+- name: Update oddjobd to create homedir for LDAP users.
+  ansible.builtin.shell: /tmp/sssd_setup/update_oddjobd.sh
+
+- name: Update sshd to use LDAP for publickey
+  ansible.builtin.shell: /tmp/sssd_setup/update_sshd.sh
+
+- name: Update nsswitch.conf to use LDAP for sudoer.
+  ansible.builtin.shell: /tmp/sssd_setup/update_nsswitch.sh
+
+- name: Remove the sssd_setup folder
+  ansible.builtin.file:
+    path: /tmp/sssd_setup
+    state: absent
+
+- name: Install SSSD configuration file
+  ansible.builtin.template: src=sssd.conf.j2 dest=/etc/sssd/sssd.conf owner=root group=root mode=600
+
+- name: Enable and start SSSD service.
+  ansible.builtin.service:
+    name: sssd.service
+    state: restarted
+    enabled: yes

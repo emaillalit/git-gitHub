@@ -1,0 +1,25 @@
+#!/bin/bash
+
+set -x
+
+status=$(TOKEN=`curl -X PUT -s "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"` && curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/autoscaling/target-lifecycle-state)
+
+name={{ service_name }}
+
+if [[ "$status" == "Terminated" ]]; then
+  echo "instance is now $status"
+  echo "going to stop service container $name"
+  docker stop $name
+
+  docker ps | grep cadvisor
+  if [[ $? == 0 ]]; then
+    docker stop cadvisor
+  fi
+
+  docker ps | grep node-exporter
+  if [[ $? == 0 ]]; then
+    docker stop node-exporter
+  fi
+
+fi
+

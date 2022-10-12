@@ -1,0 +1,38 @@
+healthcheck_endpoint: /SYSTEM/dbtest
+service_name: acct
+ldap_access_group_suffix: webserver
+
+pod:
+  containers:
+    acct:
+      image_name: "{{ aws_ecr_registry }}/acct"
+      image_tag: "{{ lookup('aws_ssm', '/<<.Env>>/acct/image_tag') }}"
+      log_driver: json-file
+      environment:
+        CONFD_BACKEND: env
+        RUNMODE_ACTIVE: "<<.IsProd>>"
+        SERVICE_ACS_HOST: bliss.priv.<<.BaseDomain>>
+        DB_HOST: db.priv.<<.BaseDomain>>
+        DB_NAME: <<.DbName>>
+        DB_PASSWORD: "{{ lookup('aws_ssm', '/<<.Env>>/db/password/app_web') }}"
+        DB_USERNAME: app_web
+        REDIS_HOST: redis.priv.<<.BaseDomain>>
+        PKI_PASSWORD: "{{ lookup('aws_ssm', '/pki/password/<<.Env>>') }}"
+        SERVICE_TREX_HOST: trex.priv.<<.BaseDomain>>
+        WASCONFIGVERSION: "{{ lookup('aws_ssm', '/<<.Env>>/acct/wasconfigversion') }}"
+        SERVICE_NOTIFY_HOST: notify.priv.<<.BaseDomain>>
+        SERVICE_SDS_HOST: sds.priv.<<.BaseDomain>>
+        SERVICE_EOS_HOST: eos.priv.<<.BaseDomain>>
+        EXTERNAL_APP_HOST: app.<<.BaseDomain>>
+        GOODDATA_HOST: <<.GoodDataHost>>
+        GOODDATA_LOGIN: <<.GoodDataLogin>>
+        GOODDATA_PASSWORD: <<.GoodDataPassword>>
+      ports:
+        - 80:8080
+        - 8444:8444
+        - 50052:50052
+      volumes:
+        - /arena/pki:/arena/pki
+        - /arena/log:/arena/log
+      probes:
+        - curl -s -f --show-error "http://localhost:80{{ healthcheck_endpoint }}"

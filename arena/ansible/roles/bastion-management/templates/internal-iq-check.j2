@@ -1,0 +1,89 @@
+#!/usr/bin/env python
+import subprocess
+import json
+import sys
+
+import requests
+
+
+def getAsgList():
+    # This function updates parameter value in AWS EC2 Parameter Store
+    # TODO: Delete parameter before updating with new value. This will remove the password history.
+    try:
+        print "getting service list ..."
+        query_para = "AutoScalingGroups[? Tags[? (Key=='Category') && Value=='service']]" + '.AutoScalingGroupName'
+        result = subprocess.check_output(
+            ['aws', 'autoscaling', 'describe-auto-scaling-groups', '--query', query_para]
+        ).decode()
+    except subprocess.CalledProcessError:
+        result = "Error: get asg list failed.\n"
+        sys.exit(1)
+    return result
+
+red = '\033[0;31m'
+green = '\033[0;32m'
+yellow = '\033[0;33m'
+nc = '\033[0m'
+res = getAsgList()
+asgList = json.loads(res)
+serviceList = []
+servicePass = {}
+serviceFail = {}
+
+baseDomain = "{{ base_domain_name }}"
+env = baseDomain.split('.')[0]
+awsEnv = 'aws' + env
+if env.startswith("arena"):
+    arenaEnv = env
+else:
+    arenaEnv = 'arena' + env
+
+
+##find service names from asg list which asg startwith awsenv or arenaenv
+for asg in asgList:
+    if asg.startswith(awsEnv) or asg.startswith(arenaEnv):
+        serviceList.append(str(asg).split('-')[1])
+    else:
+        continue
+
+if len(serviceList) == 0:
+    print "No service list found !!!"
+    sys.exit(0)
+for service in serviceList:
+    url = "http://" + service + ".priv." + baseDomain + "/SYSTEM/dbtest"
+    try:
+        res = requests.get(url, timeout=2)
+        if res.status_code == 200 and 'success' in res.text:
+            servicePass[service] = {
+                'url': url,
+                'status_code': res.status_code,
+                'responce_text': res.text
+            }
+        else:
+            serviceFail[service] = {
+                'url': url,
+                'status_code': res.status_code,
+                'responce_text': res.text
+            }
+    except Exception as e:
+        serviceFail[service] = {
+            'url': url,
+            'status_code': "error",
+            'responce_text': e
+        }
+
+if len(servicePass) >= 1:
+    print "Passed Service List:"
+    for service, res in servicePass.items():
+        print "{} {:<10} {} {}".format(green, service, res, nc)
+    print
+
+if len(serviceFail) >= 1:
+    print "Failure Service List:"
+    for service, res in serviceFail.items():
+        print "{} {:<10} {} {}".format(red, service, res, nc)
+    print
+
+if len(servicePass) == len(serviceList):
+    print "{} All Passed !!! {}".format(green, nc)
+

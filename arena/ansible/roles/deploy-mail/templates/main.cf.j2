@@ -1,0 +1,83 @@
+#############################################################################
+# Arena Postfix main.cf file for production mail servers.
+#############################################################################
+
+# Set the standard identification/relay-control variables.
+#
+mydomain = {{ base_domain_name }}
+myorigin = $mydomain
+mynetworks = 127.0.0.0/8, {{ networks }}
+mail_name = {{ mail_name }}
+smtp_helo_name = {{ helo_name }}
+
+# Restrict send domain.
+smtpd_sender_restrictions = check_sender_access hash:/etc/postfix/sender_access, reject
+
+{% if is_production == 'false' %}
+# Restrict recipient domain.
+smtpd_recipient_restrictions = check_recipient_access hash:/etc/postfix/recipient_access, reject
+
+{% endif %}
+transport_maps = hash:/etc/postfix/transport
+
+# Removed smtpd_access_maps from the list. This guarantees access list in
+# smtpd_sender_restrictions and smtpd_recipient_restrictions does not match to
+# subdomains.
+# Run `postconf -d parent_domain_matches_subdomains` to get the default value.
+parent_domain_matches_subdomains = debug_peer_list,fast_flush_domains,mynetworks,permit_mx_backup_networks,qmqpd_authorized_clients,relay_domains
+
+# Masquerade outgoing email for all *.{arenasolutions,bom}.com hosts, but only
+# masquerade senders (envelope and header), not recipients.
+#
+masquerade_domains = {{ base_domain_name }}
+masquerade_classes = envelope_sender, header_sender
+
+# Strip out headers which match the regexps in the following file.
+#
+header_checks = regexp:/etc/postfix/header_checks
+
+# Specify the alias_database location explicitly and set alias_maps to the same
+# value (otherwise Postfix may try to reference the mail.aliases NIS map).
+#
+alias_database = hash:/etc/aliases
+alias_maps = $alias_database
+
+# Allow messages up to 20MB, since autosupport messages sent from the Netapp
+# filers may exceed the default of 10MB (10240000).
+#
+message_size_limit = 10240000
+
+# The following hash file specifies EHLO keywords which should be discarded
+# for specific hosts; see the file itself for more details.
+#
+#smtp_discard_ehlo_keyword_address_maps = hash:/etc/postfix/smtp_discard_ehlo
+readme_directory = /usr/share/doc/postfix-2.10.1/README_FILES
+sample_directory = /usr/share/doc/postfix-2.10.1/samples
+sendmail_path = /usr/sbin/sendmail
+html_directory = no
+setgid_group = postdrop
+command_directory = /usr/sbin
+manpage_directory = /usr/share/man
+daemon_directory = /usr/libexec/postfix
+newaliases_path = /usr/bin/newaliases
+mailq_path = /usr/bin/mailq
+queue_directory = /var/spool/postfix
+mail_owner = postfix
+data_directory = /var/lib/postfix
+
+# Configure TLS for smtp (not smtpd)
+# See `man 5 postconf` for more information
+#
+smtp_tls_note_starttls_offer = yes
+smtp_tls_CAfile = /etc/ssl/certs/ca-bundle.crt
+tls_random_source = dev:/dev/urandom
+smtp_tls_loglevel = 1
+smtp_tls_security_level = encrypt
+smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd
+smtp_sasl_security_options = noanonymous
+relayhost = {{ ses_smtp_relay_host }}
+smtp_sasl_auth_enable = yes
+smtp_use_tls = yes
+#smtp_tls_mandatory_ciphers = high
+smtp_tls_ciphers = export
+smtp_tls_protocols = !SSLv2, !SSLv3

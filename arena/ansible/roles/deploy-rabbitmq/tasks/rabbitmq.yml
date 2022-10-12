@@ -1,0 +1,42 @@
+---
+- name: Stop RabbitMQ container
+  ansible.builtin.shell: "docker stop rabbitmq || true"
+
+- name: Remove RabbitMQ container
+  ansible.builtin.shell: "docker rm rabbitmq || true"
+
+- name: Copy initial file for RabbitMQ
+  copy:
+    src: rabbitmq-init.sh
+    dest: /tmp/rabbitmq-init.sh
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Run the RabbitMQ docker container
+  docker_container:
+    name: rabbitmq
+    image: "{{ aws_ecr_registry }}/utils/rabbitmq:{{ rabbitmq_version }}"
+    hostname: arena-rabbitmq
+    state: started
+    log_options:
+      max-size: "100m"
+      max-file: "5"
+    restart_policy: unless-stopped
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    volumes:
+      - /tmp/rabbitmq-init.sh:/tmp/rabbitmq-init.sh
+
+- name: sleep for a while
+  wait_for:
+    timeout: 20
+
+- name: enter into the rabbitmq container and run a command
+  command: docker exec rabbitmq bash -l -c /tmp/rabbitmq-init.sh
+
+- name: remove rabbitmq-init.sh
+  ansible.builtin.file:
+    path: /tmp/rabbitmq-init.sh
+    state: absent

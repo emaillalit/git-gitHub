@@ -1,0 +1,11 @@
+---
+- name: Copy install-arena-ca.sh
+  ansible.builtin.copy: src=install-arena-ca.sh dest=/tmp/install-arena-ca.sh mode=0755
+
+- name: Install Arena root CA
+  ansible.builtin.shell: /tmp/install-arena-ca.sh
+
+- name: Remove the install-arena-ca.sh folder
+  ansible.builtin.file:
+    path: /tmp/install-arena-ca.sh
+    state: absent

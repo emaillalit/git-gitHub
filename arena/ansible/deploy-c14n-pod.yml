@@ -1,0 +1,18 @@
+---
+- hosts: 'tag_Role_{{ role }}'
+  roles:
+    - role: common
+    - role: mount-storagegateway
+      when: ec2_tag_ServiceName == 'gate'
+      tags:
+        - mount-storage-gateway
+    - role: deploy-c14n-pod
+    - role: deploy-metrics-agent
+      when: service_status.stdout.find("success") != -1
+      tags:
+        - metrics-agent
+    - role: deploy-syslog-forwarding
+      when: syslog_enable == "true"
+    - role: deploy-tmds-agent
+      tags:
+        - tmds-agent

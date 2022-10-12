@@ -1,0 +1,3 @@
+- include: redis.yml
+- include: docker.yml
+- include: redis-exporter.yml

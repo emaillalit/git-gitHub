@@ -1,0 +1,15 @@
+healthcheck_endpoint: /SYSTEM/webtest
+service_name: backstop
+ldap_access_group_suffix: webserver
+
+pod:
+  containers:
+    backstop:
+      image_name: "{{ aws_ecr_registry }}/backstop"
+      image_tag: 222.0.1-SNAPSHOT
+      log_driver: json-file
+      ports:
+        - 80:8080
+        - 8444:8444
+      probes:
+        - curl -s -f --show-error "http://localhost:80{{ healthcheck_endpoint }}"

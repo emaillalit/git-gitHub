@@ -1,0 +1,14 @@
+---
+- name: get the specified bastion home EBS volume id
+  ansible.builtin.shell: |
+    aws ec2 describe-volumes --region {{ aws_region }} --filters Name=status,Values=available --filters Name=tag:Name,Values={{ env_name }}-bastion-home-vol --query "Volumes[*].VolumeId" --output text
+  register: volume_id
+
+- name: get the specified bastion host instance id
+  ansible.builtin.shell: |
+    aws ec2 describe-instances --region {{ aws_region }} --filters Name=instance-state-name,Values=running Name=tag:Role,Values={{ env_name }}-bastion-utility --query "Reservations[*].Instances[*].InstanceId" --output text
+  register: instance_id
+
+- name: attach-volume
+  ansible.builtin.shell: |
+    aws ec2 attach-volume --region {{ aws_region }} --volume-id "{{ volume_id.stdout }}" --instance-id "{{ instance_id.stdout }}" --device "{{ ebs_device }}"

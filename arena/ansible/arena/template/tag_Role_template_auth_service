@@ -1,0 +1,48 @@
+healthcheck_endpoint: /SYSTEM/dbtest
+service_name: auth
+ldap_access_group_suffix: webserver
+
+pod:
+  containers:
+    auth:
+      image_name: "{{ aws_ecr_registry }}/auth"
+      image_tag: "{{ lookup('aws_ssm', '/<<.Env>>/auth/image_tag') }}"
+      log_driver: json-file
+      environment:
+        CONFD_BACKEND: env
+        COOKIE_DOMAIN: .<<.TldDomain>>
+        DB_HOST: db.priv.<<.BaseDomain>>
+        DB_NAME: <<.DbName>>
+        DB_PASSWORD: "{{ lookup('aws_ssm', '/<<.Env>>/db/password/auth_web') }}"
+        EMAIL_DEFAULT_DOMAIN: <<.BaseDomain>>
+        EMAIL_ERROR_ALTERNATE: <<.FeedbackEmail>>
+        EMAIL_NOTIFICATION_SENDER: do-not-reply@<<.BaseDomain>>
+        EMAIL_RCPT_DOMAINS_ALLOWED: "<<.EmailRcptDomainsAllowed>>"
+        EMAIL_SENDER: proxy-mailer@<<.BaseDomain>>
+        EMAIL_SUBJECT_PREPEND: "<<.EmailSubjectPrepend>>"
+        EXTERNAL_ADMIN_HOST: admin.<<.BaseDomain>>
+        EXTERNAL_API_HOST: api.<<.BaseDomain>>
+        EXTERNAL_APP_HOST: app.<<.BaseDomain>>
+        EXTERNAL_AUTH_HOST: auth.<<.BaseDomain>>
+        HTTP_HEADERS_SOURCEIP: "<<.HttpHeadersSourceIp>>"
+        MSA_HOST: mail.priv.<<.BaseDomain>>
+        PKI_PASSWORD: "{{ lookup('aws_ssm', '/pki/password/<<.Env>>') }}"
+        REDIRECT_DOMAINS: <<.TldDomain>>
+        REDIS_HOST: redis.priv.<<.BaseDomain>>
+        SERVICE_ADMIN_HOST: admin.priv.<<.BaseDomain>>
+        SERVICE_API_HOST: api.priv.<<.BaseDomain>>
+        SERVICE_APP_HOST: app.priv.<<.BaseDomain>>
+        SERVICE_AUTH_HOST: auth.priv.<<.BaseDomain>>
+        SERVICE_BLISS_HOST: bliss.priv.<<.BaseDomain>>
+        SERVICE_GATE_HOST: gate.priv.<<.BaseDomain>>
+        SERVICE_NOTIFY_HOST: notify.priv.<<.BaseDomain>>
+        SERVICE_PLM_HOST: plm.priv.<<.BaseDomain>>
+      ports:
+        - 80:8080
+        - 8444:8444
+        - 50052:50052
+      volumes:
+        - /arena/pki:/arena/pki
+        - /arena/log:/arena/log
+      probes:
+        - curl -s -f --show-error "http://localhost:80{{ healthcheck_endpoint }}"

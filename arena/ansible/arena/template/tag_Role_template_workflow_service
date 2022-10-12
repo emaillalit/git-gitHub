@@ -1,0 +1,26 @@
+healthcheck_endpoint: /SYSTEM/dbtest
+service_name: workflow
+ldap_access_group_suffix: webserver
+
+pod:
+  containers:
+    workflow:
+      image_name: "{{ aws_ecr_registry }}/workflow"
+      image_tag: "{{ lookup('aws_ssm', '/<<.Env>>/workflow/image_tag') }}"
+      log_driver: json-file
+      environment:
+        CONFD_BACKEND: env
+        DB_HOST: db.priv.<<.BaseDomain>>
+        DB_NAME: <<.DbName>>
+        DB_PASSWORD: "{{ lookup('aws_ssm', '/<<.Env>>/db/password/workflow_web') }}"
+        PKI_PASSWORD: "{{ lookup('aws_ssm', '/pki/password/<<.Env>>') }}"
+        SERVICE_PLM_HOST: plm.priv.<<.BaseDomain>>
+      ports:
+        - 80:8080
+        - 8444:8444
+        - 50052:50052
+      volumes:
+        - /arena/pki:/arena/pki
+        - /arena/log:/arena/log
+      probes:
+        - curl -s -f --show-error "http://localhost:80{{ healthcheck_endpoint }}"

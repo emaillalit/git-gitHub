@@ -1,0 +1,2 @@
+service_name: firstboot
+ldap_access_group_suffix: ""

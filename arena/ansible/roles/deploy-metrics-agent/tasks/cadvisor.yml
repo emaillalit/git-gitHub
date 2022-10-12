@@ -1,0 +1,44 @@
+---
+- name: Stop cAdvisor container
+  ansible.builtin.shell: "docker stop cadvisor || true"
+
+- name: Remove cAdvisor container
+  ansible.builtin.shell: "docker rm cadvisor || true"
+
+- name: Pull cAdvisor images
+  docker_image:
+    name: "{{ aws_ecr_registry }}/utils/cadvisor"
+    tag: "{{ cadvisor_version }}"
+    source: pull
+
+- name: Run cAdvisor container
+  docker_container:
+    name: cadvisor
+    image: "{{ aws_ecr_registry }}/utils/cadvisor:{{ cadvisor_version }}"
+    restart_policy: unless-stopped
+    pid_mode: host
+    privileged: True
+    detach: True
+    log_options:
+      max-size: "100m"
+      max-file: "5"
+    devices:
+      - /dev/kmsg
+    ports:
+      - "50051:8080"
+    volumes:
+      - "/:/rootfs:ro"
+      - "/var/run:/var/run:ro"
+      - "/sys:/sys:ro"
+      - "/var/lib/docker/:/var/lib/docker:ro"
+      - "/dev/disk/:/dev/disk:ro"
+
+- name: Sleep for 30 seconds and continue with play
+  wait_for:
+    timeout: 30
+
+- name: Check if cAdvisor continer up
+  uri:
+    url: http://localhost:50051/metrics
+    method: GET
+    status_code: 200

@@ -1,0 +1,21 @@
+---
+- name: Install xfsprogs package
+  yum:
+    name: xfsprogs
+    state: latest
+
+- name: Create filesystem on {{ ebs_device }}
+  community.general.filesystem:
+    fstype: xfs
+    dev: "{{ ebs_device }}"
+
+- name: Copy mount_home.sh
+  ansible.builtin.template: src=mount_home.sh.j2 dest=/tmp/mount_home.sh mode=0755
+
+- name: Mount {{ ebs_device }} to /home
+  ansible.builtin.shell: source /tmp/mount_home.sh
+
+- name: Remove the mount_home.sh
+  ansible.builtin.file:
+    path: /tmp/mount_home.sh
+    state: absent

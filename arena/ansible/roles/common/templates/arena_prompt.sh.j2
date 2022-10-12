@@ -1,0 +1,9 @@
+#!/bin/sh
+
+{% if env_context.startswith('aws') %}
+export PROMPT_COMMAND='export PS1="[(\e[32;1mAWS-{{ env_context }}\e[0m) \u@{{ ec2_tag_ServiceName }}:\l \W]\\$ "'
+{% elif env_context.startswith('arena') %}
+export PROMPT_COMMAND='export PS1="[(\e[31;1mArenaProd-{{ env_context }}\e[0m) \u@{{ ec2_tag_ServiceName }}:\l \W]\\$ "'
+{% else %}
+export PROMPT_COMMAND='export PS1="[\u@\H:\w]\$ "'
+{% endif %}

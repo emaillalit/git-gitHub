@@ -1,0 +1,86 @@
+---
+- name: backup default main.cf
+  ansible.builtin.copy:
+    src: /etc/postfix/main.cf
+    dest: /etc/postfix/main.cf.backup
+    remote_src: yes
+
+- name: copy main.cf
+  ansible.builtin.template:
+    src: main.cf.j2
+    dest: /etc/postfix/main.cf
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: comment out submission in master.cf
+  ansible.builtin.replace:
+    path: /etc/postfix/master.cf
+    regexp: '^#submission'
+    replace: 'submission'
+
+- name: copy sender_access
+  ansible.builtin.template:
+    src: sender_access.j2
+    dest: /etc/postfix/sender_access
+
+- name: run sender postmap
+  ansible.builtin.command: postmap /etc/postfix/sender_access
+
+- name: copy recipient_access
+  ansible.builtin.copy:
+    src: recipient_access
+    dest: /etc/postfix/recipient_access
+  when: is_production == 'false'
+
+- name: run recipient postmap
+  ansible.builtin.command: postmap /etc/postfix/recipient_access
+  when: is_production == 'false'
+
+- name: Copy transport file
+  ansible.builtin.copy:
+    src: transport
+    dest: /etc/postfix/transport
+
+- name: Convert transport file into a ".db" file
+  ansible.builtin.command: postmap /etc/postfix/transport
+
+- name: copy sasl_passwd
+  ansible.builtin.template:
+    src: sasl_passwd.j2
+    dest: /etc/postfix/sasl_passwd
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: create a hashmap database file
+  ansible.builtin.command: postmap hash:/etc/postfix/sasl_passwd
+
+- name: copy aliases
+  ansible.builtin.template:
+    src: aliases.j2
+    dest: /etc/aliases
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: run postalias
+  ansible.builtin.command: postalias hash:/etc/aliases
+
+- name: restart postfix
+  ansible.builtin.service:
+    name: postfix
+    state: restarted
+
+- name: copy mime-email.txt
+  ansible.builtin.template:
+    src: mime-email.txt.j2
+    dest: /tmp/mime-email.txt
+
+- name: send test email
+  ansible.builtin.shell: "sendmail -t < /tmp/mime-email.txt"
+
+- name: delete mime-email.txt
+  ansible.builtin.file:
+    path: /tmp/mime-email.txt
+    state: absent

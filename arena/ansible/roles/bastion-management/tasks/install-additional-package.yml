@@ -1,0 +1,7 @@
+---
+- name: install additional packages for bastion
+  yum:
+    name: "{{ packages }}"
+  vars:
+    packages:
+    - jq

@@ -1,0 +1,37 @@
+---
+
+- name: remove arena-exporter previous image
+  docker_image:
+    state: absent
+    name: "{{ aws_ecr_registry }}/utils/arena-exporter"
+    tag: "latest"
+
+- name: Pull arena-exporter images
+  docker_image:
+    name: "{{ aws_ecr_registry }}/utils/arena-exporter"
+    tag: "latest"
+    source: pull
+
+- name: run arena-exporter container
+  docker_container:
+    name: arena-exporter
+    image: "{{ aws_ecr_registry }}/utils/arena-exporter:latest"
+    network_mode: host
+    state: started
+    log_options:
+      max-size: "100m"
+      max-file: "5"
+    restart_policy: unless-stopped
+    entrypoint:
+      - "/arena/arena-exporter-linux-amd64"
+      - "-listen-address :8089"
+      - "-environment {{ env_context }}"
+      - "-region {{ aws_region }}"
+      - "-es-cluster {{es_cluster}}"
+
+- name: check arena-exporter alive
+  uri:
+    url: http://localhost:8089/metrics
+    method: GET
+    status_code:
+      - 200

@@ -1,0 +1,60 @@
+---
+- name: Stop fluent-bit container
+  ansible.builtin.shell: "docker stop fluent-bit || true"
+
+- name: Remove fluent-bit container
+  ansible.builtin.shell: "docker rm fluent-bit || true"
+
+- name: Create a specific user for fluent-bit
+  ansible.builtin.user:
+    name: fluent-bit
+    shell: /bin/false
+    system: yes
+    state: present
+
+- name: Create a new folder for fluent-bit configuration files
+  ansible.builtin.file:
+    path: /etc/fluent-bit
+    state: directory
+    owner: fluent-bit
+    group: fluent-bit
+    mode: '0755'
+
+- name: Copy parsers.conf
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: /etc/fluent-bit
+    owner: fluent-bit
+    group: fluent-bit
+    mode: '0755'
+  with_items:
+    - parsers.conf
+
+- name: Copy fluent-bit.conf
+  ansible.builtin.template:
+    src: fluent-bit.conf.j2
+    dest: /etc/fluent-bit/fluent-bit.conf
+    owner: fluent-bit
+    group: fluent-bit
+    mode: '0755'
+
+- name: Pull fluent-bit images
+  docker_image:
+    name: "{{ aws_ecr_registry }}/utils/fluent-bit"
+    tag: "{{ fluent_bit_version }}"
+    source: pull
+
+- name: Run the fluent-bit docker container
+  docker_container:
+    name: fluent-bit
+    image: "{{ aws_ecr_registry }}/utils/fluent-bit:{{ fluent_bit_version }}"
+    network_mode: host
+    state: started
+    log_options:
+      max-size: "100m"
+      max-file: "5"
+    volumes:
+      - /etc/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
+      - /etc/fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf
+      - /arena/log:/arena/log
+    restart_policy: unless-stopped

@@ -1,0 +1,47 @@
+---
+- name: Stop telegraf container
+  ansible.builtin.shell: "docker stop telegraf-agent || true"
+
+- name: Remove telegraf container
+  ansible.builtin.shell: "docker rm telegraf-agent || true"
+
+- name: Create a specific user for Telegraf
+  ansible.builtin.user:
+    name: telegraf
+    shell: /bin/false
+    system: yes
+    state: present
+
+- name: create a new folder for Telegraf configuration files
+  ansible.builtin.file:
+    path: /etc/telegraf
+    state: directory
+    owner: telegraf
+    group: telegraf
+    mode: '0755'
+
+- name: copy configuration file for Telegraf
+  ansible.builtin.template:
+    src: telegraf.conf.j2
+    dest: /etc/telegraf/telegraf.conf
+    owner: telegraf
+    group: telegraf
+    mode: '0755'
+
+- name: Run the Telegraf docker container
+  docker_container:
+    name: telegraf-agent
+    image: telegraf
+    network_mode: host
+    state: started
+    env:
+      HOST_MOUNT_PREFIX: /hostfs
+      HOST_ETC: /hostfs/etc
+      HOST_SYS: /hostfs/sys
+      HOST_PROC: /hostfs/proc
+      HOST_VAR: /hostfs/var
+    volumes:
+      - /:/hostfs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:rw
+      - /etc/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf
+    restart_policy: unless-stopped

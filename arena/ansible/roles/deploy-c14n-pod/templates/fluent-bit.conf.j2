@@ -1,0 +1,171 @@
+[SERVICE]
+    # Flush
+    # =====
+    # Set an interval of seconds before to flush records to a destination
+    Flush        5
+
+    # Daemon
+    # ======
+    # Instruct Fluent Bit to run in foreground or background mode.
+    Daemon       Off
+
+    # Log_Level
+    # =========
+    # Set the verbosity level of the service, values can be:
+    #
+    # - error
+    # - warning
+    # - info
+    # - debug
+    # - trace
+    #
+    # By default 'info' is set, that means it includes 'error' and 'warning'.
+    Log_Level    info
+
+    # Parsers_File
+    # ============
+    # Specify an optional 'Parsers' configuration file
+    Parsers_File parsers.conf
+    # Plugins_File plugins.conf
+
+    # HTTP Server
+    # ===========
+    # Enable/Disable the built-in HTTP Server for metrics
+    HTTP_Server  Off
+    HTTP_Listen  0.0.0.0
+    HTTP_Port    2020
+
+
+[INPUT]
+    Name                tail
+    Path                /arena/log/tcl-access.log
+    Parser              arena-access-log-tcl-parser
+    Tag                 {{ service_name }}-{{ instance_id }}-es-access
+
+[INPUT]
+    Name                tail
+    Path                /arena/log/java-access.log*
+    Parser              arena-access-log-java-parser
+    Tag                 {{ service_name }}-{{ instance_id }}-es-access
+
+[OUTPUT]
+    Name                es
+    Match               *-es-access
+{% if env == "arenagov" or env == "gvc" %}
+    Host                es01.util.arenagov.com
+{% else %}
+    Host                es01.util.aws.bom.com
+{% endif %}
+    Port                9200
+    Logstash_Format     On
+    Logstash_Prefix     {{ env_context }}-access-logs
+    Include_Tag_Key     On
+    Tag_Key             arena-service
+    #Trace_Output        On
+    Trace_Error         On
+
+[INPUT]
+    Name                tail
+    Path                /arena/log/tcl-server.log
+    Multiline           On
+    Parser_Firstline    arena-server-log-tcl-parser
+    Tag                 {{ service_name }}-{{ instance_id }}-es-server
+
+[INPUT]
+    Name                tail
+    Path                /arena/log/java-server.log
+    Multiline           On
+    Parser_Firstline    arena-server-log-java-parser
+    Tag                 {{ service_name }}-{{ instance_id }}-es-server
+
+[OUTPUT]
+    Name                es
+    Match               *-es-server
+{% if env == "arenagov" or env == "gvc" %}
+    Host                es01.util.arenagov.com
+{% else %}
+    Host                es01.util.aws.bom.com
+{% endif %}
+    Port                9200
+    Logstash_Format     On
+    Logstash_Prefix     {{ env_context }}-server-logs
+    Include_Tag_Key     On
+    Tag_Key             arena-service
+    #Trace_Output        On
+    Trace_Error         On
+
+
+[INPUT]
+    Name                tail
+    Path                /arena/log/tcl-access.log
+    DB                  /arena/log/.tcl_access_log.fluent-bit.db
+    Tag                 {{ service_name }}-{{ instance_id }}-s3-access
+
+[INPUT]
+    Name                tail
+    Path                /arena/log/java-access.log*
+    DB                  /arena/log/.java_access_log.fluent-bit.db
+    Tag                 {{ service_name }}-{{ instance_id }}-s3-access
+
+[OUTPUT]
+    Name                s3
+    Match               {{ service_name }}-{{ instance_id }}-s3-access
+    region              {{ aws_region }}
+    bucket              {{ env_context }}-weblogs.{{ aws_region }}.{{ aws_account_id }}
+    s3_key_format       /container-logs/{{ service_name }}/access/%Y/%m/%d/%H/%Y%m%dT%H%M-{{ instance_id }}-access-log
+    upload_timeout      10m
+
+[INPUT]
+    Name                tail
+    Path                /arena/log/tcl-server.log
+    DB                  /arena/log/.tcl_server_log.fluent-bit.db
+    Tag                 {{ service_name }}-{{ instance_id }}-s3-server
+
+[INPUT]
+    Name                tail
+    Path                /arena/log/java-server.log
+    DB                  /arena/log/.java_server_log.fluent-bit.db
+    Tag                 {{ service_name }}-{{ instance_id }}-s3-server
+
+[OUTPUT]
+    Name                s3
+    Match               {{ service_name }}-{{ instance_id }}-s3-server
+    region              {{ aws_region }}
+    bucket              {{ env_context }}-weblogs.{{ aws_region }}.{{ aws_account_id }}
+    s3_key_format       /container-logs/{{ service_name }}/server/%Y/%m/%d/%H/%Y%m%dT%H%M-{{ instance_id }}-server-log
+    upload_timeout      10m
+
+[INPUT]
+    Name                tail
+    Path                /arena/log/java-debug.log
+    DB                  /arena/log/.java_debug_log.fluent-bit.db
+    Tag                 {{ service_name }}-{{ instance_id }}-s3-debug
+
+[OUTPUT]
+    Name                s3
+    Match               {{ service_name }}-{{ instance_id }}-s3-debug
+    region              {{ aws_region }}
+    bucket              {{ env_context }}-weblogs.{{ aws_region }}.{{ aws_account_id }}
+    s3_key_format       /container-logs/{{ service_name }}/debug/%Y/%m/%d/%H/%Y%m%dT%H%M-{{ instance_id }}-debug-log
+    upload_timeout      10m
+
+
+{% if syslog_enable == "true" %}
+# Disabled. ArenaGov does not need it for now. - Zhaofeng
+#[OUTPUT]
+#    name                 syslog
+#    match                *
+#    host                 syslog.aws.bom.com
+#    port                 514
+#    mode                 tcp
+#    syslog_format        rfc5424
+#    syslog_maxsize       2048
+#    syslog_severity_key  severity
+#    syslog_facility_key  facility
+#    syslog_hostname_key  hostname
+#    syslog_appname_key   appname
+#    syslog_procid_key    procid
+#    syslog_msgid_key     msgid
+#    syslog_sd_key        sd
+#    syslog_message_key   log
+{% endif %}

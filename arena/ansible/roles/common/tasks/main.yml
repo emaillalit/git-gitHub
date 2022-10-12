@@ -1,0 +1,8 @@
+- include: region.yml
+- include: hostname.yml
+- include: etc.yml
+- include: motd.yml
+- include: prompt.yml
+- include: arena-ca.yml
+- include: sssd.yml
+- include: docker-config.yml

@@ -1,0 +1,12 @@
+# System accounts
+
+deployment_accounts:
+  - name: firstboot
+    state: present
+    group: sudoadm
+    roles:
+      - all
+
+user_groups:
+  - name: sudoadm
+    comment: all sudo privs without password

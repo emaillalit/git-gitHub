@@ -1,0 +1,72 @@
+---
+- name: Get short environment name from service tag_Role file
+  ansible.builtin.shell: "echo {{ env_context }} | sed 's/aws//g'"
+  register: short_environment_name
+
+- name: Stop pod containers
+  ansible.builtin.shell: "docker stop {{item}} || true"
+  with_items: "{{ pod.containers.keys() }}"
+
+- name: Remove all containers
+  ansible.builtin.shell: "docker rm {{item}} || true"
+  with_items: "{{ pod.containers.keys() }}"
+
+- name: Pull images
+  docker_image:
+    name: "{{ pod.containers[item].image_name }}"
+    tag: "{{ pod.containers[item].image_tag }}"
+    source: pull
+  with_items: "{{ pod.containers.keys() }}"
+
+- name: Create directory
+  ansible.builtin.file:
+    path: "/arena/pki"
+    owner: firstboot
+    group: firstboot
+    state: directory
+  with_items: "{{ pod.containers.keys() }}"
+  when: pod.containers[item].volumes is defined
+
+- name: Download pki files
+  ansible.builtin.shell: |
+    aws --region {{aws_region}} s3 cp s3://apki.{{aws_region}}.{{aws_account_id}}/"{{short_environment_name.stdout}}-{{item}}" /arena/pki/ --recursive
+  become: yes
+  become_user: firstboot
+  with_items: "{{ pod.containers.keys() }}"
+  when: pod.containers[item].volumes is defined
+
+- name: Run containers
+  docker_container:
+    name: "{{ item }}"
+    image: "{{ pod.containers[item].image_name }}:{{ pod.containers[item].image_tag }}"
+    env: "{{ pod.containers[item].environment | default({}) }}"
+    volumes: "{{ pod.containers[item].volumes | default([]) }}"
+    state: started
+    restart_policy: unless-stopped
+    ports: "{{ pod.containers[item].ports }}"
+    log_driver: "{{ pod.containers[item].log_driver | default('json-file') }}"
+    # log_options: "{{ pod.containers[item].log_options | default({}) }}"
+    log_options:
+      max-size: "100m"
+      max-file: "5"
+    # ulimits config only valid for service docker container
+    ulimits:
+      - "{{ pod.containers[item].nofile | default('nofile:65536:65536') }}"
+  with_items: "{{ pod.containers.keys() }}"
+  no_log: True
+
+- name: Probe pod containers
+  ansible.builtin.shell: "{{ item }}"
+  register: probe_status
+  until: probe_status.stdout.find("success") != -1
+  retries: 10
+  delay: 5
+  with_items: "[ {% for k, v in pod.containers.items() %} {% for p in v.get('probes', []) %} '{{ p }}', {% endfor %} {% endfor %} ]"
+
+- name: Sleep for 30 seconds and continue with play
+  wait_for:
+    timeout: 30
+
+- name: Register service status
+  ansible.builtin.shell: "curl -s -f --show-error http://localhost:80{{ healthcheck_endpoint }}"
+  register: service_status
