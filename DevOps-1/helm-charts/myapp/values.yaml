@@ -1,0 +1,7 @@
+myapp:
+    name: myapp
+    replicas: 5
+    image: nginx:1.7.8
+    port: 80
+    nodeport: 30008
+    type: NodePort

@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+    ports:
+    - containerPort: 80
+    resources: {}
+    env:
+     - name: LOGFILENAME
+       valueFrom:
+         configMapKeyRef:
+           name: myname
+           key: logfile
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}

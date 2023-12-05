@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: first
+  name: first
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: first
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: first
+    spec:
+      containers:
+      - image: rajendrait99/cognixia7may:1.0
+        name: cognixia7may
+        ports:
+        - containerPort: 8080
+        resources: {}
+status: {}
